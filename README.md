@@ -12,3 +12,9 @@ https://pixel-poem.itch.io/dungeon-assetpuck
 https://0x72.itch.io/dungeontileset-ii
 
 https://humblepixel.itch.io/pocket-inventory-series-5-player-status
+
+https://admurin.itch.io/enemy-golem-reinforced
+
+https://flavrius.itch.io/scary-mobs-aaahhh
+
+https://glionox.itch.io/items16#google_vignette
