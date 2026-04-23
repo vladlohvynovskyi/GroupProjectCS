@@ -1,0 +1,462 @@
+import sys
+import random
+
+import pygame
+
+from config import (
+    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, TILE_SIZE,
+    MAP_COLS, MAP_ROWS,
+    TILE_DOOR, TILE_CHEST, TILE_STAIR,
+)
+from enums import GameState, ItemType
+from items import HealthPotion
+from assets import Assets
+from player import Player
+from dungeon import DungeonMap
+from screens import (
+    draw_exploration, draw_combat, draw_inventory,
+    draw_game_over, draw_victory,
+)
+
+
+class Game:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.display.set_caption("Dreadful Depths")
+        self.clock = pygame.time.Clock()
+        self.assets = Assets()
+        self.floor = 1
+        self.font = pygame.font.SysFont(None, 36)
+        self.small_font = pygame.font.SysFont(None, 24)
+        self.title_font = pygame.font.SysFont(None, 64)
+        self.medium_font = pygame.font.SysFont(None, 30)
+
+        self.state = GameState.EXPLORATION
+       
+
+        self.dungeon = DungeonMap()
+        self.dungeon.generate()
+
+        # Fog of war
+        self.revealed = [[False] * MAP_COLS for _ in range(MAP_ROWS)]
+        self.visited_rooms = set()
+
+        first_room = self.dungeon.rooms[0]
+        spawn_x = float(first_room[0] * TILE_SIZE + first_room[2] * TILE_SIZE / 2)
+        spawn_y = float(first_room[1] * TILE_SIZE + first_room[3] * TILE_SIZE / 2)
+        self.player = Player(spawn_x, spawn_y)
+        self.update_fog()
+
+        
+        self.current_enemy = None
+        self.combat_message = ""
+        self.combat_turn = "player"
+        self.combat_log = []
+        self.selected_item_index = 0
+
+        # UI button rectangles
+        self.attack_button    = pygame.Rect(640, 480, 220, 52)
+        self.run_button       = pygame.Rect(640, 544, 220, 52)
+        self.inventory_button = pygame.Rect(640, 608, 220, 52)
+        self.use_item_button  = pygame.Rect(100, 500, 150, 40)
+        self.drop_item_button = pygame.Rect(300, 500, 150, 40)
+        self.back_button      = pygame.Rect(600, 500, 150, 40)
+        
+
+    def update_fog(self):
+        px, py = self.player.tile_x(), self.player.tile_y()
+
+        # Reveal the current tile and its immediate neighbors (for corridors)
+        for dy in range(-1, 2):
+            for dx in range(-1, 2):
+                nx, ny = px + dx, py + dy
+                if 0 <= nx < MAP_COLS and 0 <= ny < MAP_ROWS:
+                    self.revealed[ny][nx] = True
+
+        # If player is inside a room, reveal the entire room (+ its walls)
+        for i, (rx, ry, rw, rh) in enumerate(self.dungeon.rooms):
+            if i in self.visited_rooms:
+                continue
+            if rx <= px < rx + rw and ry <= py < ry + rh:
+                self.visited_rooms.add(i)
+                for y in range(ry - 1, ry + rh + 1):
+                    for x in range(rx - 1, rx + rw + 1):
+                        if 0 <= x < MAP_COLS and 0 <= y < MAP_ROWS:
+                            self.revealed[y][x] = True
+
+    def _descend(self):
+        self.floor += 1
+        print(f"Descending to floor {self.floor}...")
+        self.dungeon = DungeonMap()
+        self.dungeon.generate()
+
+        # Reset fog of war for the new floor
+        self.revealed = [[False] * MAP_COLS for _ in range(MAP_ROWS)]
+        self.visited_rooms = set()
+
+        first_room = self.dungeon.rooms[0]
+        self.player.x = float(first_room[0] * TILE_SIZE + first_room[2] * TILE_SIZE / 2)
+        self.player.y = float(first_room[1] * TILE_SIZE + first_room[3] * TILE_SIZE / 2)
+        self.player.keys = set()
+        self.update_fog()
+
+       
+        self.current_enemy = None
+        self.combat_log = []
+
+    def _handle_interact(self):
+        player = self.player
+        dungeon = self.dungeon
+
+        for adj_dx, adj_dy in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+            check_x = player.tile_x() + adj_dx
+            check_y = player.tile_y() + adj_dy
+
+            if not (0 <= check_x < MAP_COLS and 0 <= check_y < MAP_ROWS):
+                continue
+
+            tile = dungeon.tiles[check_y][check_x]
+
+            if tile == TILE_STAIR:
+                self._descend()
+                break
+
+            elif tile == TILE_DOOR:
+                result = dungeon.open_door(check_x, check_y, player.keys)
+                if result == "opened":
+                    print("Door opened!")
+                elif result == "unlocked":
+                    print("Unlocked and opened!")
+                elif result == "locked":
+                    print("Door is locked!")
+                break
+
+            elif tile == TILE_CHEST:
+                found = dungeon.open_chest(check_x, check_y)
+                if found is None:
+                    break
+                print(f"Found: {found}")
+
+                if isinstance(found, str) and found.startswith("key_"):
+                    player.keys.add(found)
+                    print(f"Picked up {found}. Keys: {sorted(player.keys)}")
+                elif found == "smth":
+                    potion = HealthPotion("Health Potion", 30)
+                    if player.add_item(potion):
+                        self.combat_log.append("Found Health Potion!")
+                    else:
+                        self.combat_log.append("Inventory full!")
+                break
+
+    def _check_traps(self):
+        player = self.player
+        damage = self.dungeon.trigger_trap(player.tile_x(), player.tile_y())
+        if damage is None:
+            return
+        player.take_damage(damage)
+        self.combat_log.append(f"Trap! {damage} damage!")
+        print(f"Trap! {damage} damage!")
+        if player.hp <= 0:
+            self.state = GameState.GAME_OVER
+
+    def _update_enemies(self, dt):
+        """Move alive enemies; cull dead ones."""
+        for enemy in self.dungeon.enemies:
+            if enemy.hp > 0:
+                enemy.update_movement(dt, self.dungeon.tiles)
+        self.dungeon.enemies = [e for e in self.dungeon.enemies if e.hp > 0]
+   
+    def _check_combat_trigger(self):
+        """Check if player is adjacent to an enemy"""
+        if self.state != GameState.EXPLORATION:
+            return
+        if self.player.escape_timer > 0:
+            return
+        
+        # Use the methods that calculate current tile from pixel position
+        player_tile_x = self.player.tile_x()  # This calls the method
+        player_tile_y = self.player.tile_y()  # This calls the method
+        
+        for enemy in self.dungeon.enemies[:]:
+            if enemy.hp <= 0:
+                continue
+                
+            # Check if enemy is adjacent to player
+            if (abs(enemy.current_tile_x - player_tile_x) <= 1 and 
+                abs(enemy.current_tile_y - player_tile_y) <= 1):
+                self.state = GameState.COMBAT
+                self.current_enemy = enemy
+                self.combat_turn = "player"
+                self.combat_message = f"Encountered {enemy.name}!"
+                self.combat_log.append(f"Encountered {enemy.name}!")
+                break
+
+    def handle_exploration(self, events):
+        """Handle input during exploration state."""
+        self._check_combat_trigger()
+        self._check_traps()
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_e:
+                    self._handle_interact()
+                elif event.key == pygame.K_i:
+                    self.state = GameState.INVENTORY
+                    self.combat_log.append("Opened inventory")
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if self.inventory_button.collidepoint(event.pos):
+                    self.state = GameState.INVENTORY
+                    self.combat_log.append("Opened inventory")
+
+    def handle_combat(self, events):
+        """Handle events in combat mode"""
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                
+                # Attack button
+                if self.attack_button.collidepoint(mouse_pos) and self.combat_turn == "player":
+                    # Player attacks
+                    damage = self.player.calculate_damage(self.current_enemy.element)
+                    
+                    # Check for critical hit (10% chance)
+                    is_critical = random.random() < 0.1
+                    if is_critical:
+                        damage = int(damage * 2)
+                    
+                    # Apply damage
+                    enemy_defeated = self.current_enemy.take_damage(damage)
+                    
+                    # Add to combat log
+                    crit_text = "CRITICAL! " if is_critical else ""
+                    if self.player.equipped_weapon:
+                        element_text = f"({self.player.equipped_weapon.element.name} vs {self.current_enemy.element.name})"
+                    else:
+                        element_text = f"(Bare hands vs {self.current_enemy.element.name})"
+                    self.combat_log.append(f"{crit_text}You dealt {damage} damage {element_text}")
+                    
+                    if enemy_defeated:
+                        # Victory
+                        xp_gained = self.current_enemy.xp_reward
+                        leveled_up = self.player.gain_xp(xp_gained)
+                        self.combat_log.append(f"Victory! Gained {xp_gained} XP")
+                        if leveled_up:
+                            self.combat_log.append(f"Level Up! Now level {self.player.level}!")
+                        
+                        # Remove enemy from dungeon
+                        if self.current_enemy in self.dungeon.enemies:
+                            self.dungeon.enemies.remove(self.current_enemy)
+                        
+                        # Check if all enemies are defeated
+                        if not self.dungeon.enemies:
+                            self.state = GameState.VICTORY
+                        else:
+                            self.state = GameState.EXPLORATION
+                        self.current_enemy = None
+                    else:
+                        # Enemy turn
+                        self.combat_turn = "enemy"
+                        self.combat_message = "Enemy's turn..."
+                
+                # Run button
+                elif self.run_button.collidepoint(mouse_pos) and self.combat_turn == "player":
+                    # Attempt to run (50% chance)
+                    if random.random() < 0.5:
+                        self.player.escape_timer = 3.0
+                        self.state = GameState.EXPLORATION
+                        self.combat_log.append("You escaped! (invincible for 3s)")
+                        self.current_enemy = None
+                    else:
+                        self.combat_log.append("Couldn't escape!")
+                        self.combat_turn = "enemy"
+                
+                # Inventory button
+                elif self.inventory_button.collidepoint(mouse_pos):
+                    self.state = GameState.INVENTORY
+                    self.combat_log.append("Opened inventory")
+        
+        # Enemy turn (delayed)
+        if self.combat_turn == "enemy" and self.current_enemy:
+            pygame.time.wait(500)  # Short delay for dramatic effect
+            damage = self.current_enemy.damage
+            player_dead = self.player.take_damage(damage)
+            self.combat_log.append(f"{self.current_enemy.name} dealt {damage} damage!")
+
+            if player_dead:
+                self.state = GameState.GAME_OVER
+                self.combat_message = "You died!"
+            else:
+                self.combat_turn = "player"
+                self.combat_message = "Your turn!"
+
+    def handle_inventory(self, events):
+        """Handle events in inventory mode"""
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                
+                # Item selection (click on items)
+                for i, item in enumerate(self.player.inventory):
+                    item_rect = pygame.Rect(80, 90 + i * 60, 640, 50)
+                    if item_rect.collidepoint(mouse_pos):
+                        self.selected_item_index = i
+                        self.combat_log.append(f"Selected {item.name}")
+                
+                # Use/Equip button
+                if self.use_item_button.collidepoint(mouse_pos):
+                    if self.selected_item_index < len(self.player.inventory):
+                        item = self.player.inventory[self.selected_item_index]
+                        
+                        if item.type == ItemType.HEALTH:
+                            # Use health potion
+                            self.player.heal(item.value)
+                            self.player.inventory.pop(self.selected_item_index)
+                            self.combat_log.append(f"Used {item.name}, healed {item.value} HP")
+                            
+                            # Adjust selection if needed
+                            if self.selected_item_index >= len(self.player.inventory):
+                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
+                        
+                        elif item.type == ItemType.WEAPON:
+                            # Equip weapon
+                            self.player.equip_weapon(item)
+                            self.combat_log.append(f"Equipped {item.name}")
+                        
+                        elif item.type == ItemType.ARMOR:
+                            # Equip armor
+                            self.player.equip_armor(item)
+                            self.combat_log.append(f"Equipped {item.name}")
+                
+                # Drop button
+                elif self.drop_item_button.collidepoint(mouse_pos):
+                    if self.selected_item_index < len(self.player.inventory):
+                        dropped_item = self.player.inventory.pop(self.selected_item_index)
+                        if dropped_item == self.player.equipped_weapon:         
+                            self.player.equipped_weapon = None                  
+                            self.combat_log.append(f"Unequipped {dropped_item.name}")  
+                        elif dropped_item == self.player.equipped_armor:        
+                            self.player.equipped_armor = None                   
+                            self.combat_log.append(f"Unequipped {dropped_item.name}")  
+                        self.combat_log.append(f"Dropped {dropped_item.name}")
+                        
+                        # Adjust selection if needed
+                        if self.selected_item_index >= len(self.player.inventory):
+                            self.selected_item_index = max(0, len(self.player.inventory) - 1)
+                
+                # Back button
+                elif self.back_button.collidepoint(mouse_pos):
+                    # Return to previous state
+                    if self.current_enemy:
+                        self.state = GameState.COMBAT
+                    else:
+                        self.state = GameState.EXPLORATION
+                    self.combat_log.append("Closed inventory")
+            
+            # Keyboard navigation
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    self.selected_item_index = max(0, self.selected_item_index - 1)
+                elif event.key == pygame.K_DOWN:
+                    self.selected_item_index = min(len(self.player.inventory) - 1, self.selected_item_index + 1)
+                elif event.key == pygame.K_RETURN:
+                    # Use selected item
+                    if self.selected_item_index < len(self.player.inventory):
+                        item = self.player.inventory[self.selected_item_index]
+                        if item.type == ItemType.HEALTH:
+                            self.player.heal(item.value)
+                            self.player.inventory.pop(self.selected_item_index)
+                            self.combat_log.append(f"Used {item.name}, healed {item.value} HP")
+                            if self.selected_item_index >= len(self.player.inventory):
+                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
+                elif event.key == pygame.K_ESCAPE:
+                    # Back to previous state
+                    if self.current_enemy:
+                        self.state = GameState.COMBAT
+                    else:
+                        self.state = GameState.EXPLORATION
+                    self.combat_log.append("Closed inventory")
+  
+
+    def run(self):
+        """Main game loop"""
+        running = True
+        
+        while running:
+            # Calculate delta time
+            dt = self.clock.tick(FPS) / 1000.0
+            
+            # Get events
+            events = pygame.event.get()
+            
+            # Handle quit events
+            for event in events:
+                if event.type == pygame.QUIT:
+                    running = False
+                
+                # Global key handlers
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        if self.state == GameState.INVENTORY:
+                            # Back from inventory
+                            if self.current_enemy:
+                                self.state = GameState.COMBAT
+                            else:
+                                self.state = GameState.EXPLORATION
+                        elif self.state == GameState.EXPLORATION:
+                            # Maybe pause menu? For now just continue
+                            pass
+                    
+                    # Restart on game over or victory
+                    if self.state in [GameState.GAME_OVER, GameState.VICTORY]:
+                        if event.key == pygame.K_SPACE:
+                            # Restart game
+                            self.__init__()
+                            return self.run()  # Restart the game loop
+                        elif event.key == pygame.K_ESCAPE:
+                            running = False
+            
+            # Handle states
+            if self.state == GameState.EXPLORATION:
+                # Update player movement
+                self.player.update(pygame.key.get_pressed(), dt, self.dungeon.tiles)
+                
+                # Update fog of war (kept from main.py)
+                self.update_fog()
+                
+                # Update enemies
+                self._update_enemies(dt)
+                
+                # Handle exploration events
+                self.handle_exploration(events)
+                
+                # Draw exploration
+                draw_exploration(self)
+                
+            elif self.state == GameState.COMBAT:
+                # Handle combat events
+                self.handle_combat(events)
+                
+                # Draw combat
+                draw_combat(self)
+                
+            elif self.state == GameState.INVENTORY:
+                # Handle inventory events
+                self.handle_inventory(events)
+                
+                # Draw inventory
+                draw_inventory(self)
+                
+            elif self.state == GameState.GAME_OVER:
+                # Draw game over screen
+                draw_game_over(self)
+                
+            elif self.state == GameState.VICTORY:
+                # Draw victory screen
+                draw_victory(self)
+            
+            # Update display
+            pygame.display.flip()
+        
+        # Quit game
+        pygame.quit()
+        sys.exit()
