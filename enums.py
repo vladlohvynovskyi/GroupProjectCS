@@ -8,6 +8,9 @@ class GameState(Enum):
     PAUSED = 3
     GAME_OVER = 4
     VICTORY = 5
+    MAIN_MENU = 6
+    OPTIONS = 7
+    CONTROLS = 8
 
 class Element(Enum):
     NORMAL = 0
