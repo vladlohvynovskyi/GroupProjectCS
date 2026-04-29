@@ -20,3 +20,5 @@ https://flavrius.itch.io/scary-mobs-aaahhh
 https://glionox.itch.io/items16#google_vignette
 
 https://stext25.itch.io/cherry-blossom
+
+https://fonts.google.com/specimen/MedievalSharp?preview.script=Latn
