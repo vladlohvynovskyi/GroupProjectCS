@@ -17,6 +17,11 @@ from screens import (
     draw_exploration, draw_combat, draw_inventory,
     draw_game_over, draw_victory,
 )
+from menus import (
+    build_main_menu_buttons, build_pause_menu_buttons, build_back_button,
+    Slider,
+    draw_main_menu, draw_pause_menu, draw_options, draw_controls,
+)
 
 
 class Game:
@@ -26,14 +31,38 @@ class Game:
         pygame.display.set_caption("Dreadful Depths")
         self.clock = pygame.time.Clock()
         self.assets = Assets()
-        self.floor = 1
         self.font = pygame.font.SysFont(None, 36)
         self.small_font = pygame.font.SysFont(None, 24)
         self.title_font = pygame.font.SysFont(None, 64)
         self.medium_font = pygame.font.SysFont(None, 30)
 
-        self.state = GameState.EXPLORATION
-       
+        # Menu UI (persists across runs)
+        self.state = GameState.MAIN_MENU
+        self.prev_state = GameState.MAIN_MENU
+        self.main_menu_buttons = build_main_menu_buttons()
+        self.pause_menu_buttons = build_pause_menu_buttons()
+        self.options_back_button = build_back_button()
+        self.controls_back_button = build_back_button()
+
+        slider_x = SCREEN_WIDTH // 2 - 180
+        slider_w = 360
+        self.master_slider = Slider((slider_x, 260, slider_w, 20), value=0.8)
+        self.music_slider  = Slider((slider_x, 340, slider_w, 20), value=0.6)
+        self.sfx_slider    = Slider((slider_x, 420, slider_w, 20), value=0.7)
+
+        # UI button rectangles (shared between combat/inventory/exploration)
+        self.attack_button    = pygame.Rect(640, 480, 220, 52)
+        self.run_button       = pygame.Rect(640, 544, 220, 52)
+        self.inventory_button = pygame.Rect(640, 608, 220, 52)
+        self.use_item_button  = pygame.Rect(100, 500, 150, 40)
+        self.drop_item_button = pygame.Rect(300, 500, 150, 40)
+        self.back_button      = pygame.Rect(600, 500, 150, 40)
+
+        self._start_new_run()
+
+    def _start_new_run(self):
+        """Reset world state for a fresh playthrough."""
+        self.floor = 1
 
         self.dungeon = DungeonMap()
         self.dungeon.generate()
@@ -48,21 +77,12 @@ class Game:
         self.player = Player(spawn_x, spawn_y)
         self.update_fog()
 
-        
         self.current_enemy = None
         self.combat_message = ""
         self.combat_turn = "player"
         self.combat_log = []
         self.selected_item_index = 0
 
-        # UI button rectangles
-        self.attack_button    = pygame.Rect(640, 480, 220, 52)
-        self.run_button       = pygame.Rect(640, 544, 220, 52)
-        self.inventory_button = pygame.Rect(640, 608, 220, 52)
-        self.use_item_button  = pygame.Rect(100, 500, 150, 40)
-        self.drop_item_button = pygame.Rect(300, 500, 150, 40)
-        self.back_button      = pygame.Rect(600, 500, 150, 40)
-        
 
     def update_fog(self):
         px, py = self.player.tile_x(), self.player.tile_y()
@@ -192,6 +212,79 @@ class Game:
                 self.combat_log.append(f"Encountered {enemy.name}!")
                 break
 
+    def _open_pause(self):
+        self.prev_state = self.state
+        self.state = GameState.PAUSED
+
+    def _return_from_submenu(self):
+        """Called when 'Back' is pressed from Options/Controls."""
+        if self.prev_state == GameState.PAUSED:
+            self.state = GameState.PAUSED
+        else:
+            self.state = GameState.MAIN_MENU
+
+    def handle_main_menu(self, events):
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                for button in self.main_menu_buttons:
+                    if not button.clicked(event.pos):
+                        continue
+                    if button.action == "start":
+                        self._start_new_run()
+                        self.state = GameState.EXPLORATION
+                    elif button.action == "options":
+                        self.prev_state = GameState.MAIN_MENU
+                        self.state = GameState.OPTIONS
+                    elif button.action == "controls":
+                        self.prev_state = GameState.MAIN_MENU
+                        self.state = GameState.CONTROLS
+                    elif button.action == "quit":
+                        pygame.event.post(pygame.event.Event(pygame.QUIT))
+            elif event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    self._start_new_run()
+                    self.state = GameState.EXPLORATION
+
+    def handle_pause(self, events):
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                for button in self.pause_menu_buttons:
+                    if not button.clicked(event.pos):
+                        continue
+                    if button.action == "resume":
+                        self.state = GameState.EXPLORATION
+                    elif button.action == "options":
+                        self.prev_state = GameState.PAUSED
+                        self.state = GameState.OPTIONS
+                    elif button.action == "controls":
+                        self.prev_state = GameState.PAUSED
+                        self.state = GameState.CONTROLS
+                    elif button.action == "main_menu":
+                        self.state = GameState.MAIN_MENU
+                    elif button.action == "quit":
+                        pygame.event.post(pygame.event.Event(pygame.QUIT))
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self.state = GameState.EXPLORATION
+
+    def handle_options(self, events):
+        for event in events:
+            self.master_slider.handle_event(event)
+            self.music_slider.handle_event(event)
+            self.sfx_slider.handle_event(event)
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if self.options_back_button.clicked(event.pos):
+                    self._return_from_submenu()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self._return_from_submenu()
+
+    def handle_controls(self, events):
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if self.controls_back_button.clicked(event.pos):
+                    self._return_from_submenu()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self._return_from_submenu()
+
     def handle_exploration(self, events):
         """Handle input during exploration state."""
         self._check_combat_trigger()
@@ -203,6 +296,9 @@ class Game:
                 elif event.key == pygame.K_i:
                     self.state = GameState.INVENTORY
                     self.combat_log.append("Opened inventory")
+                elif event.key == pygame.K_ESCAPE:
+                    self._open_pause()
+                    return
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if self.inventory_button.collidepoint(event.pos):
                     self.state = GameState.INVENTORY
@@ -277,7 +373,6 @@ class Game:
         
         # Enemy turn (delayed)
         if self.combat_turn == "enemy" and self.current_enemy:
-            pygame.time.wait(500)  # Short delay for dramatic effect
             damage = self.current_enemy.damage
             player_dead = self.player.take_damage(damage)
             self.combat_log.append(f"{self.current_enemy.name} dealt {damage} damage!")
@@ -392,64 +487,79 @@ class Game:
             for event in events:
                 if event.type == pygame.QUIT:
                     running = False
-                
-                # Global key handlers
+
+                # Global key handlers (per-state handlers own Esc; don't consume it here)
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        if self.state == GameState.INVENTORY:
-                            # Back from inventory
-                            if self.current_enemy:
-                                self.state = GameState.COMBAT
-                            else:
-                                self.state = GameState.EXPLORATION
-                        elif self.state == GameState.EXPLORATION:
-                            # Maybe pause menu? For now just continue
-                            pass
-                    
                     # Restart on game over or victory
                     if self.state in [GameState.GAME_OVER, GameState.VICTORY]:
                         if event.key == pygame.K_SPACE:
-                            # Restart game
-                            self.__init__()
-                            return self.run()  # Restart the game loop
+                            self._start_new_run()
+                            self.state = GameState.EXPLORATION
                         elif event.key == pygame.K_ESCAPE:
-                            running = False
-            
+                            self.state = GameState.MAIN_MENU
+
             # Handle states
-            if self.state == GameState.EXPLORATION:
+            if self.state == GameState.MAIN_MENU:
+                self.handle_main_menu(events)
+                draw_main_menu(self)
+
+            elif self.state == GameState.PAUSED:
+                # Keep the last exploration frame as backdrop, then overlay the pause menu.
+                draw_exploration(self)
+                self.handle_pause(events)
+                draw_pause_menu(self)
+
+            elif self.state == GameState.OPTIONS:
+                # Draw whichever screen we came from as backdrop.
+                if self.prev_state == GameState.PAUSED:
+                    draw_exploration(self)
+                else:
+                    draw_main_menu(self)
+                self.handle_options(events)
+                draw_options(self)
+
+            elif self.state == GameState.CONTROLS:
+                if self.prev_state == GameState.PAUSED:
+                    draw_exploration(self)
+                else:
+                    draw_main_menu(self)
+                self.handle_controls(events)
+                draw_controls(self)
+
+            elif self.state == GameState.EXPLORATION:
                 # Update player movement
                 self.player.update(pygame.key.get_pressed(), dt, self.dungeon.tiles)
-                
+
                 # Update fog of war (kept from main.py)
                 self.update_fog()
-                
+
                 # Update enemies
                 self._update_enemies(dt)
-                
+
                 # Handle exploration events
                 self.handle_exploration(events)
-                
+
                 # Draw exploration
                 draw_exploration(self)
-                
+
             elif self.state == GameState.COMBAT:
                 # Handle combat events
                 self.handle_combat(events)
-                
+
                 # Draw combat
                 draw_combat(self)
-                
+
             elif self.state == GameState.INVENTORY:
                 # Handle inventory events
                 self.handle_inventory(events)
-                
+
                 # Draw inventory
                 draw_inventory(self)
-                
+
             elif self.state == GameState.GAME_OVER:
                 # Draw game over screen
                 draw_game_over(self)
-                
+
             elif self.state == GameState.VICTORY:
                 # Draw victory screen
                 draw_victory(self)
