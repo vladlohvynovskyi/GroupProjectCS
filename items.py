@@ -36,3 +36,12 @@ class Armor(Item):
     def __init__(self, name, defense, description=""):
         super().__init__(name, ItemType.ARMOR, Element.NORMAL, 0, 0, defense, description)
 
+
+class Torch(Item):
+    def __init__(self, name="Torch", duration=120.0, radius_bonus=160):
+        super().__init__(name, ItemType.TORCH, Element.NORMAL,
+                         int(duration), 0, 0,
+                         f"Lights the area for {int(duration)}s")
+        self.duration = float(duration)
+        self.radius_bonus = int(radius_bonus)
+

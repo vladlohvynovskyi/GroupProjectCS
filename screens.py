@@ -4,7 +4,7 @@ from config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE,
     PLAYER_LIGHT_RADIUS, DARKNESS,
     COLOR_BLACK, WHITE, RED, GREEN, BLUE, YELLOW,
-    GRAY, DARK_GRAY,
+    GRAY, DARK_GRAY, ORANGE,
 )
 from enums import GameState, ItemType
 from elements import ELEMENT_COLORS
@@ -22,10 +22,13 @@ def draw_darkness(game, camera_x, camera_y):
     darkness = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
     darkness.fill((0, 0, 0, DARKNESS))
 
-    # Light around player
+    # Light around player (torches expand the radius while burning)
     px = int(game.player.x - camera_x)
     py = int(game.player.y - camera_y)
-    _apply_light(darkness, px, py, PLAYER_LIGHT_RADIUS, DARKNESS)
+    light_radius = PLAYER_LIGHT_RADIUS
+    if game.player.torch_time_left > 0:
+        light_radius += game.player.torch_radius_bonus
+    _apply_light(darkness, px, py, light_radius, DARKNESS)
 
     # Light around campfires
     for cf in game.dungeon.campfires:
@@ -66,12 +69,16 @@ def draw_exploration(game):
     
     if game.player.equipped_weapon:
         draw_text(game, f"Weapon: {game.player.equipped_weapon.name}", 10, 130, YELLOW, game.small_font)
+
+    if game.player.torch_time_left > 0:
+        draw_text(game, f"Torch: {game.player.torch_time_left:0.1f}s",
+                  10, 160, ORANGE, game.small_font)
     
     # Draw inventory button
     draw_button(game, game.inventory_button, "Inventory (I)")
     
     # Draw controls hint
-    draw_text(game, "WASD: Move | E: Interact | I: Inventory", 
+    draw_text(game, "WASD: Move | E: Interact | I: Inventory",
               200, SCREEN_HEIGHT - 30, WHITE, game.small_font)
 
 
@@ -165,6 +172,8 @@ def draw_inventory(game):
                 item_text += f" (Heal: {item.value})"
             elif item.type == ItemType.ARMOR:
                 item_text += f" (DEF: {item.defense})"
+            elif item.type == ItemType.TORCH:
+                item_text += f" (Light: {int(item.duration)}s)"
             
             # Truncate if too long
             if len(item_text) > 40:
@@ -187,7 +196,7 @@ def draw_inventory(game):
 
     if game.player.keys:
         draw_text(game, f"Keys: {', '.join(sorted(game.player.keys))}",
-                  100, 500, YELLOW, game.small_font)
+                  100, 600, YELLOW, game.small_font)
 
 def draw_game_over(game):
     """Draw game over screen"""

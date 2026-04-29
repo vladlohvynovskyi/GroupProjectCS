@@ -24,3 +24,4 @@ class ItemType(Enum):
     WEAPON = 0
     HEALTH = 1
     ARMOR = 2
+    TORCH = 3

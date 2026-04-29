@@ -220,7 +220,7 @@ class DungeonMap:
 
         return reachable
 
-    def _add_locked_doors(self, max_locks=6):
+    def _add_locked_doors(self, max_locks=4):
         lockable = list(self.doors)
         random.shuffle(lockable)
         used_chests = set()
@@ -255,7 +255,7 @@ class DungeonMap:
             rx, ry, rw, rh = room
 
             # Chests
-            if i > 0 and random.random() < 0.4:  # i > 0 to prevent spawning in the first room
+            if i > 0 and random.random() < 0.8:  # i > 0 to prevent spawning in the first room
                 cx = random.randint(rx, rx + rw - 1)
                 cy = random.randint(ry, ry + rh - 1)
                 if self.tiles[cy][cx] == TILE_FLOOR:
@@ -263,7 +263,7 @@ class DungeonMap:
                     chests.append({
                         "x": cx,
                         "y": cy,
-                        "contents": random.choice(["smth"]),
+                        "contents": random.choice(["smth", "torch"]),
                         "opened": False,
                         "room_index": i
                     })

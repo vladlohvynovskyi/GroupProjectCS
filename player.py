@@ -32,6 +32,10 @@ class Player:
 
         self.escape_timer = 0.0  # seconds of post-escape invincibility
 
+        # Active torch state (light bonus that decays over time)
+        self.torch_time_left = 0.0
+        self.torch_radius_bonus = 0
+
         # Inventory
         self.inventory = []
         self.max_inventory = 5
@@ -82,6 +86,11 @@ class Player:
 
     def heal(self, amount):
         self.hp = min(self.max_hp, self.hp + amount)
+
+    def light_torch(self, torch):
+        # Stack remaining time so a fresh torch refreshes the light source
+        self.torch_time_left = max(self.torch_time_left, 0.0) + torch.duration
+        self.torch_radius_bonus = max(self.torch_radius_bonus, torch.radius_bonus)
 
     def gain_xp(self, amount):
         self.xp += amount
@@ -167,6 +176,11 @@ class Player:
 
         if self.escape_timer > 0:
             self.escape_timer = max(0.0, self.escape_timer - dt)
+
+        if self.torch_time_left > 0:
+            self.torch_time_left = max(0.0, self.torch_time_left - dt)
+            if self.torch_time_left == 0.0:
+                self.torch_radius_bonus = 0
 
         frame_duration = self.RUN_FRAME_DURATION if self.is_moving else self.IDLE_FRAME_DURATION
         self.anim_timer += dt

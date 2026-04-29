@@ -9,7 +9,7 @@ from config import (
     TILE_DOOR, TILE_CHEST, TILE_STAIR,
 )
 from enums import GameState, ItemType
-from items import HealthPotion
+from items import HealthPotion, Torch
 from assets import Assets
 from player import Player
 from dungeon import DungeonMap
@@ -165,6 +165,12 @@ class Game:
                     potion = HealthPotion("Health Potion", 30)
                     if player.add_item(potion):
                         self.combat_log.append("Found Health Potion!")
+                    else:
+                        self.combat_log.append("Inventory full!")
+                elif found == "torch":
+                    torch = Torch()
+                    if player.add_item(torch):
+                        self.combat_log.append("Found Torch!")
                     else:
                         self.combat_log.append("Inventory full!")
                 break
@@ -407,11 +413,18 @@ class Game:
                             self.player.heal(item.value)
                             self.player.inventory.pop(self.selected_item_index)
                             self.combat_log.append(f"Used {item.name}, healed {item.value} HP")
-                            
+
                             # Adjust selection if needed
                             if self.selected_item_index >= len(self.player.inventory):
                                 self.selected_item_index = max(0, len(self.player.inventory) - 1)
-                        
+
+                        elif item.type == ItemType.TORCH:
+                            self.player.light_torch(item)
+                            self.player.inventory.pop(self.selected_item_index)
+                            self.combat_log.append(f"Lit {item.name} ({int(item.duration)}s)")
+                            if self.selected_item_index >= len(self.player.inventory):
+                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
+
                         elif item.type == ItemType.WEAPON:
                             # Equip weapon
                             self.player.equip_weapon(item)
@@ -461,6 +474,12 @@ class Game:
                             self.player.heal(item.value)
                             self.player.inventory.pop(self.selected_item_index)
                             self.combat_log.append(f"Used {item.name}, healed {item.value} HP")
+                            if self.selected_item_index >= len(self.player.inventory):
+                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
+                        elif item.type == ItemType.TORCH:
+                            self.player.light_torch(item)
+                            self.player.inventory.pop(self.selected_item_index)
+                            self.combat_log.append(f"Lit {item.name} ({int(item.duration)}s)")
                             if self.selected_item_index >= len(self.player.inventory):
                                 self.selected_item_index = max(0, len(self.player.inventory) - 1)
                 elif event.key == pygame.K_ESCAPE:
