@@ -45,3 +45,12 @@ class Torch(Item):
         self.duration = float(duration)
         self.radius_bonus = int(radius_bonus)
 
+class Food(Item):
+    def __init__(self, name, hunger_amount):
+        super().__init__(name, ItemType.FOOD, Element.NORMAL,
+                         hunger_amount, 0, 0, f"Restores {hunger_amount} hunger")
+
+class SanityPotion(Item):
+    def __init__(self, name, restore_amount):
+        super().__init__(name, ItemType.SANITY, Element.NORMAL,
+                         restore_amount, 0, 0, f"Restores {restore_amount} sanity")

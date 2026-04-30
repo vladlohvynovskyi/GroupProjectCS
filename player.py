@@ -44,6 +44,22 @@ class Player:
 
         # Starting equipment
         self._setup_starting_gear()
+
+        # Hunger system
+        self.max_hunger = 100
+        self.hunger = 100
+        self.hunger_timer = 0.0
+        self.starvation_timer = 0.0
+
+        #Sanity
+        self.max_sanity = 100 
+        self.sanity = 100 #TEST
+
+        self.sanity_timer = 0.0
+        self.combat_stress = 0
+        self.last_damge_time = 0.0
+        self.last_combat_time = 0.0
+        self.sanity_damage_timer = 0.0
       
     def _setup_starting_gear(self):
         """Give player starting items"""
@@ -78,13 +94,25 @@ class Player:
             self.equipped_armor = armor
 
     def take_damage(self, damage):
-        # Armor reduces damage
-        if self.equipped_armor:
-            damage = max(1, damage - self.equipped_armor.defense)
-        self.hp -= damage
-        return self.hp <= 0
+            # Armor reduces damage
+            if self.equipped_armor:
+                damage = max(1, damage - self.equipped_armor.defense)
+
+            self.hp -= damage
+            self.hunger = max(0, self.hunger - damage)
+
+            # Big damage causes sanity loss
+            if damage >= 15:
+                self.sanity = max(0, self.sanity - 10)
+
+            return self.hp <= 0
 
     def heal(self, amount):
+        if self.sanity <= 20:
+            amount = int(amount * 0.5)
+        elif self.sanity <= 40:
+            amount = int(amount * 0.75)
+
         self.hp = min(self.max_hp, self.hp + amount)
 
     def light_torch(self, torch):
@@ -188,6 +216,39 @@ class Player:
             self.anim_timer -= frame_duration
             self.anim_frame = (self.anim_frame + 1) % 4
 
+    def update_survival_hunger(self, dt):
+        self.hunger_timer += dt
+        if self.hunger_timer >= 20: 
+            self.hunger = max(0, self.hunger - 1)
+            self.hunger_timer = 0
+
+        if self.hunger <= 20:
+            self.starvation_timer += dt
+
+            if self.hunger == 0:
+                damage_interval = 5
+                damage_amount = 2
+
+            elif self.hunger <= 10:
+                damage_interval = 10
+                damage_amount = 1
+            else:
+                damage_interval = 20
+                damage_amount = 1
+
+
+
+            if self.starvation_timer >= damage_interval:
+                self.take_damage(damage_amount)
+                self.starvation_timer = 0
+        
+        else:
+            self.starvation_timer = 0
+
+    
+    def restore_hunger(self, amount):
+        self.hunger = min(self.max_hunger, self.hunger + amount)
+
     def draw(self, screen, camera_x: float, camera_y: float, assets) -> None:
         frames = assets.player_run if self.is_moving else assets.player_idle
         frame = frames[self.anim_frame]
@@ -197,3 +258,40 @@ class Player:
             int(self.x - camera_x) - TILE_SIZE // 2,
             int(self.y - camera_y) - TILE_SIZE // 2,
         ))
+
+    def update_sanity(self, dt):
+        current_time = pygame.time.get_ticks()
+
+
+        #Reset combat stress if the player had a break
+        if current_time - self.last_combat_time > 8000:
+            self.combat_stress = 0
+
+        #Condition 1: Hunger is 0
+        if self.hunger == 0:
+            self.sanity_timer += dt
+            if self.sanity_timer >= 3:
+
+                self.sanity = max(0, self.sanity - 2)
+                self.sanity_timer = 0
+        else:
+            self.sanity_timer = 0
+        #Condition 3: Too many fights in a short time
+        if self.combat_stress >= 3:
+            self.sanity_damage_timer += dt
+            if self.sanity_damage_timer >= 3:
+                self.sanity = max(0, self.sanity - 8)
+                self.sanity_damage_timer = 0
+                self.combat_stress = 0
+
+        else:
+            self.sanity_damage_timer = 0
+         
+
+
+        
+    def restore_sanity(self, amount):
+            self.sanity = min(self.max_sanity, self.sanity + amount)
+
+
+    
