@@ -2,15 +2,16 @@ from enum import Enum
 
 
 class GameState(Enum):
-    EXPLORATION = 0
-    COMBAT = 1
-    INVENTORY = 2
-    PAUSED = 3
-    GAME_OVER = 4
-    VICTORY = 5
-    MAIN_MENU = 6
-    OPTIONS = 7
-    CONTROLS = 8
+    MAIN_MENU = 0
+    EXPLORATION = 1
+    COMBAT = 2
+    INVENTORY = 3
+    PAUSED = 4
+    GAME_OVER = 5
+    VICTORY = 6
+    SHOP = 7
+    OPTIONS = 8
+    CONTROLS = 9
 
 class Element(Enum):
     NORMAL = 0
@@ -24,4 +25,6 @@ class ItemType(Enum):
     WEAPON = 0
     HEALTH = 1
     ARMOR = 2
-    TORCH = 3
+    FOOD = 3
+    SANITY = 4
+    TORCH = 5
