@@ -79,11 +79,6 @@ def draw_exploration(game):
     for npc in game.npcs:
         npc.draw(game.screen, camera_x, camera_y, game.assets)
 
-    #Draw hallucination fake enemies
-    if game.hallucination is not None:
-        hx = int(game.hallucination["x"] - camera_x)
-        hy = int(game.hallucination["y"] - camera_y)
-        pygame.draw.rect(game.screen, RED, pygame.Rect(hx - 18, hy - 18, 36, 36))
     
     
     # Draw player
@@ -139,6 +134,11 @@ def draw_exploration(game):
     elif game.player.hunger <= 20:
         draw_text(game, "Hunger is low", 10, warning_y, YELLOW, game.small_font)
         warning_y += 25
+    
+    if game.player.torch_time_left <= 0 and game.player.darkness_timer >= 90:
+        draw_text(game, "It's too dark.... Find a torch", 10, warning_y, BLUE, game.small_font)
+        warning_y += 25
+    
     if game.player.sanity == 0:
         draw_text(game, "SANITY LOST!", 10, warning_y, RED)
     elif game.player.sanity <= 20:

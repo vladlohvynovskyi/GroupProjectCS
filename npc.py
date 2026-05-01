@@ -3,7 +3,7 @@ import random
 
 
 from config import TILE_SIZE
-from items import HealthPotion, Food, SanityPotion
+from items import HealthPotion, Food, SanityPotion, Torch, Armor
 from enums import GameState
 class NPC:
     def __init__(self, tile_x, tile_y, name, lines, role="guide"):
@@ -45,6 +45,8 @@ class NPC:
                     (HealthPotion("Health Potion", 30), 30),
                     (Food("Bread", 30), 20),
                     (SanityPotion("Sanity Potion", 30), 40),
+                    (Torch(), 25),
+                    (Armor("Leather Armor", 5, "Better protection"), 50),
                 ]
 
                 self.shop_items = []
@@ -91,7 +93,17 @@ class NPC:
                     f"{self.name}: Well done. Take {self.quest_reward_xp} XP."
                 )
                 game.player.xp += self.quest_reward_xp
-                game.player.add_item(HealthPotion("Health Potion", 30))
+                #game.player.add_item(HealthPotion("Health Potion", 30))
+
+                reward = random.choice([
+                    HealthPotion("Health Potion", 30),
+                    Torch(),
+                    Armor("Leather Armor", 5, "Quest reward armor"),
+                ])
+                if game.player.add_item(reward):
+                    game.combat_log.append(f"Quest reward: {reward.name}")
+                else:
+                    game.combat_log.append("Inventory full! Could not take reward.")
 
                 game.remove_npc(self)
 
