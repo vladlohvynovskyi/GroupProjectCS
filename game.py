@@ -301,6 +301,7 @@ class Game:
                 self.combat_turn = "player"
                 self.combat_message = f"Encountered {enemy.name}!"
                 self.combat_log.append(f"Encountered {enemy.name}!")
+                self.player.record_combat_stress()
                 break
 
     def _open_pause(self):
@@ -682,7 +683,7 @@ class Game:
                 
                 self.player.update_survival_hunger(dt)
                 self.player.update_sanity(dt)
-                self.update_hallucination(dt)
+                
                 # Update fog of war (kept from main.py)
                 self.update_fog()
 
@@ -829,13 +830,28 @@ class Game:
             ("Guide", ["Stay close to the light.", "Doors may hide danger."], "guide"),
         ]
 
-        # Rare NPCs per floor
-        npc_count = random.randint(1, 3)
+        npc_count = random.randint(2, 5) #NPC AMOUNT
+        #npc_count = min(5, 2 + self.floor // 2) #Another option
 
-        for _ in range(npc_count):
-            if len(self.dungeon.rooms) <= 1:
-                return
+        possible_rooms = self.dungeon.rooms[1:]
 
+        safe_rooms = []
+        for room in possible_rooms:
+            rx, ry, rw, rh = room
+            has_enemy = False
+
+            for enemy in self.dungeon.enemies:
+                if rx <= enemy.current_tile_x < rx + rw and ry <= enemy.current_tile_y < ry + rh:
+                    has_enemy = True
+                    break
+
+            if not has_enemy:
+                safe_rooms.append(room)
+
+        random.shuffle(safe_rooms)
+        rooms_to_use = safe_rooms[:npc_count]
+
+        for room in rooms_to_use:
             role_choice = random.choice(npc_templates)
 
             placed = False
@@ -844,15 +860,13 @@ class Game:
             while not placed and attempts > 0:
                 attempts -= 1
 
-                # Do not spawn in first room
-                room = random.choice(self.dungeon.rooms[1:])
                 rx, ry, rw, rh = room
                 tile_x = random.randint(rx, rx + rw - 1)
                 tile_y = random.randint(ry, ry + rh - 1)
 
                 if self.dungeon.tiles[tile_y][tile_x] != TILE_FLOOR:
                     continue
-                # Do not spawn beside doors & chests & stairs & traps & campfires
+
                 bad_nearby = False
                 for dy in range(-1, 2):
                     for dx in range(-1, 2):
@@ -862,16 +876,18 @@ class Game:
                             if self.dungeon.tiles[ny][nx] in [
                                 TILE_DOOR,
                                 TILE_CHEST,
-
                                 TILE_STAIR,
                             ]:
                                 bad_nearby = True
+
                 if bad_nearby:
                     continue
+
                 name, lines, role = role_choice
                 self.npcs.append(NPC(tile_x, tile_y, name, lines, role))
                 placed = True
 
+    #TEST THE NPCS
     # def spawn_npc(self):
     #     self.npcs = []
 
