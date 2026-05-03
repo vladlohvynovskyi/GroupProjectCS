@@ -261,6 +261,7 @@ class DungeonMap:
         chests = []
         traps = []
         campfires = []
+        mult = self._difficulty_mult()
 
         for i, room in enumerate(self.rooms):
             rx, ry, rw, rh = room
@@ -288,7 +289,7 @@ class DungeonMap:
                     traps.append({
                         "x": tx,
                         "y": ty,
-                        "damage": random.randint(5, 15),
+                        "damage": max(1, int(random.randint(5, 15) * mult)),
                         "triggered": False,
                     })
 
@@ -326,6 +327,7 @@ class DungeonMap:
     
     def _spawn_enemies(self):
         """Spawn enemies in rooms (skip room 0 = player spawn)."""
+        mult = self._difficulty_mult()
         for i, room in enumerate(self.rooms):
             if i == 0:
                 continue
@@ -365,7 +367,7 @@ class DungeonMap:
                         else ["earth", "fire", "water"])
 
                 # Create enemy
-                enemy = Enemy(ex, ey, enemy_type)
+                enemy = Enemy(ex, ey, enemy_type, difficulty_mult=mult)
                 enemy.room_index = i
                 self.enemies.append(enemy)
     
