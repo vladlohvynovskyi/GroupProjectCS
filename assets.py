@@ -2,7 +2,7 @@ import os
 
 import pygame
 
-from config import TILE_SIZE, ASSET_DIR, UI_DIR
+from config import TILE_SIZE, ASSET_DIR, UI_DIR, SCRIPT_DIR
 
 
 def load_sprite(filename, width=TILE_SIZE, height=TILE_SIZE):
@@ -52,3 +52,30 @@ class Assets:
         self.ui_close        = load_ui("Menu_Close.png")
         self.ui_slider_track = load_ui("PanelSettings_Slider.png")
         self.ui_slider_knob  = load_ui("PanelSettings_Slider_B.png")
+
+        # Healer NPC
+        healer_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "monk.png")
+        healer_sheet = pygame.image.load(healer_path).convert_alpha()
+        healer_frame = healer_sheet.subsurface((0, 0, 32, 32))
+        self.npc_healer = pygame.transform.scale(healer_frame, (TILE_SIZE, TILE_SIZE))
+
+        # Merchant NPC
+        merchant_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "Male1.png")
+        merchant_sheet = pygame.image.load(merchant_path).convert_alpha()
+        merchant_frame = merchant_sheet.subsurface((0, 0, 32, 32))
+        self.npc_merchant = pygame.transform.scale(merchant_frame, (TILE_SIZE, TILE_SIZE))
+
+        # Guide NPC
+        guide_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "Male2.png")
+        guide_sheet = pygame.image.load(guide_path).convert_alpha()
+        guide_frame = guide_sheet.subsurface((0, 0, 32, 32))
+        self.npc_guide = pygame.transform.scale(guide_frame, (TILE_SIZE, TILE_SIZE))
+
+        # Quest NPC
+        quest_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "Necromancer_creativekind-Sheet.png")
+        quest_sheet = pygame.image.load(quest_path).convert_alpha()
+        quest_frame = quest_sheet.subsurface((0, 0, 128, 128))
+        self.npc_quest = pygame.transform.scale(quest_frame, (TILE_SIZE, TILE_SIZE))
+
+        # Dark tint
+        self.npc_merchant.fill((180, 180, 180), special_flags=pygame.BLEND_RGB_MULT)
