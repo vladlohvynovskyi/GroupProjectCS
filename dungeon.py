@@ -14,6 +14,9 @@ from enemy import Enemy
 
 
 class DungeonMap:
+    TRAP_FRAME_DURATION = 0.30
+    DIFFICULTY_PER_FLOOR = 0.15 
+
     def __init__(self):
         self.tiles     = []
         self.rooms     = []
@@ -23,9 +26,17 @@ class DungeonMap:
         self.campfires = []
         self.staircase = None
         self.floor_variants = []
-        self.enemies = []  
+        self.enemies = []
+        self.floor = 1
 
-    def generate(self):
+        self.trap_anim_frame = 0
+        self.trap_anim_timer = 0.0
+
+    def _difficulty_mult(self):
+        return 1.0 + self.DIFFICULTY_PER_FLOOR * (self.floor - 1)
+
+    def generate(self, floor=1):
+        self.floor = floor
         self.tiles = []
         for row in range(MAP_ROWS):
             self.tiles.append([TILE_VOID] * MAP_COLS)
@@ -385,6 +396,13 @@ class DungeonMap:
                 return chest["contents"]
         return None
 
+    def update(self, dt):
+        """Advance shared tile animations"""
+        self.trap_anim_timer += dt
+        if self.trap_anim_timer >= self.TRAP_FRAME_DURATION:
+            self.trap_anim_timer -= self.TRAP_FRAME_DURATION
+            self.trap_anim_frame = (self.trap_anim_frame + 1) % 4
+
     def trigger_trap(self, x, y):
         """Trigger the trap at (x, y) if present. Returns damage dealt, or None."""
         for trap in self.traps:
@@ -426,7 +444,7 @@ class DungeonMap:
                 elif tile == TILE_TRAP:
                     variant = self.floor_variants[y][x]
                     screen.blit(assets.floor_tiles[variant], pos)
-                    screen.blit(assets.trap, pos)
+                    screen.blit(assets.trap_frames[self.trap_anim_frame], pos)
                 elif tile == TILE_CAMPFIRE:
                     variant = self.floor_variants[y][x]
                     screen.blit(assets.floor_tiles[variant], pos)

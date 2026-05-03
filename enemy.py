@@ -25,7 +25,7 @@ class Enemy:
                 print(f"[Warning] Could not load enemy sprite sheet: {e}")
                 cls.sprite_sheet = None
 
-    def __init__(self, tile_x, tile_y, enemy_type="basic"):
+    def __init__(self, tile_x, tile_y, enemy_type="basic", difficulty_mult=1.0):
         # Tile position
         self.current_tile_x = tile_x
         self.current_tile_y = tile_y
@@ -115,6 +115,12 @@ class Enemy:
             self.columns = [0, 1, 2]
             self.xp_reward = 200
             self.color = PURPLE
+
+        # Difficulty scaling 
+        self.max_hp = max(1, int(self.max_hp * difficulty_mult))
+        self.hp = self.max_hp
+        self.damage = max(1, int(self.damage * difficulty_mult))
+        self.xp_reward = max(1, int(self.xp_reward * difficulty_mult))
 
         # Load sprite frames from the sheet
         self.frames_images = []

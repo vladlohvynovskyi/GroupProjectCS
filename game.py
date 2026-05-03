@@ -65,7 +65,7 @@ class Game:
         self.floor = 1
 
         self.dungeon = DungeonMap()
-        self.dungeon.generate()
+        self.dungeon.generate(self.floor)
 
         # Fog of war
         self.revealed = [[False] * MAP_COLS for _ in range(MAP_ROWS)]
@@ -109,7 +109,7 @@ class Game:
         self.floor += 1
         print(f"Descending to floor {self.floor}...")
         self.dungeon = DungeonMap()
-        self.dungeon.generate()
+        self.dungeon.generate(self.floor)
 
         # Reset fog of war for the new floor
         self.revealed = [[False] * MAP_COLS for _ in range(MAP_ROWS)]
@@ -549,11 +549,14 @@ class Game:
                 # Update player movement
                 self.player.update(pygame.key.get_pressed(), dt, self.dungeon.tiles)
 
-                # Update fog of war (kept from main.py)
+                # Update fog of war
                 self.update_fog()
 
                 # Update enemies
                 self._update_enemies(dt)
+
+                # Update animated tiles
+                self.dungeon.update(dt)
 
                 # Handle exploration events
                 self.handle_exploration(events)

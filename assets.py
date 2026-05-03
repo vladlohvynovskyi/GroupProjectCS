@@ -27,7 +27,10 @@ class Assets:
         self.wall  = load_sprite("wall_mid.png")
         self.door      = load_sprite("doors_leaf_closed.png")
         self.chest     = load_sprite("chest_full_open_anim_f0.png")
-        self.trap      = load_sprite("floor_spikes_anim_f0.png")
+        self.trap_frames = [
+            load_sprite(f"floor_spikes_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
+            for i in range(4)
+        ]
         self.stairs    = load_sprite("floor_ladder.png")
         self.player_idle = [
             load_sprite(f"knight_m_idle_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
