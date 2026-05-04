@@ -32,6 +32,17 @@ class Assets:
             for i in range(4)
         ]
         self.stairs    = load_sprite("floor_ladder.png")
+
+        # Campfire animation 
+        campfire_path = os.path.join(SCRIPT_DIR, "assets", "images", "dungeon", "32px fireplace.png")
+        campfire_sheet = pygame.image.load(campfire_path).convert_alpha()
+        self.campfire_frames = [
+            pygame.transform.scale(
+                campfire_sheet.subsurface((i * 32, 0, 32, 32)),
+                (TILE_SIZE, TILE_SIZE),
+            )
+            for i in range(6)
+        ]
         self.player_idle = [
             load_sprite(f"knight_m_idle_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
             for i in range(4)

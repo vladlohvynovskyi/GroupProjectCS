@@ -8,14 +8,14 @@ from config import (
     SCREEN_WIDTH, SCREEN_HEIGHT,
     TILE_VOID, TILE_FLOOR, TILE_WALL, TILE_DOOR, TILE_CHEST,
     TILE_TRAP, TILE_CAMPFIRE, TILE_STAIR,
-    COLOR_CAMPFIRE,
 )
 from enemy import Enemy
 
 
 class DungeonMap:
     TRAP_FRAME_DURATION = 0.30
-    DIFFICULTY_PER_FLOOR = 0.15 
+    CAMPFIRE_FRAME_DURATION = 0.12
+    DIFFICULTY_PER_FLOOR = 0.15
 
     def __init__(self):
         self.tiles     = []
@@ -31,6 +31,8 @@ class DungeonMap:
 
         self.trap_anim_frame = 0
         self.trap_anim_timer = 0.0
+        self.campfire_anim_frame = 0
+        self.campfire_anim_timer = 0.0
 
     def _difficulty_mult(self):
         return 1.0 + self.DIFFICULTY_PER_FLOOR * (self.floor - 1)
@@ -405,6 +407,11 @@ class DungeonMap:
             self.trap_anim_timer -= self.TRAP_FRAME_DURATION
             self.trap_anim_frame = (self.trap_anim_frame + 1) % 4
 
+        self.campfire_anim_timer += dt
+        if self.campfire_anim_timer >= self.CAMPFIRE_FRAME_DURATION:
+            self.campfire_anim_timer -= self.CAMPFIRE_FRAME_DURATION
+            self.campfire_anim_frame = (self.campfire_anim_frame + 1) % 6
+
     def trigger_trap(self, x, y):
         """Trigger the trap at (x, y) if present. Returns damage dealt, or None."""
         for trap in self.traps:
@@ -450,8 +457,7 @@ class DungeonMap:
                 elif tile == TILE_CAMPFIRE:
                     variant = self.floor_variants[y][x]
                     screen.blit(assets.floor_tiles[variant], pos)
-                    center = (pixel_x + TILE_SIZE // 2, pixel_y + TILE_SIZE // 2)
-                    pygame.draw.circle(screen, COLOR_CAMPFIRE, center, 10)
+                    screen.blit(assets.campfire_frames[self.campfire_anim_frame], pos)
                 elif tile == TILE_STAIR:
                     variant = self.floor_variants[y][x]
                     screen.blit(assets.floor_tiles[variant], pos)
