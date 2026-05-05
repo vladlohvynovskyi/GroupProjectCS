@@ -1,0 +1,38 @@
+from enums import Element, ItemType
+from elements import EFFECTIVENESS
+
+
+
+class Item:
+    """Base item class with element-aware damage multiplier."""
+    def __init__(self, name, item_type, element=Element.NORMAL,
+                 value=0, damage=0, defense=0, description=""):
+        self.name = name
+        self.type = item_type
+        self.element = element
+        self.value = value
+        self.damage = damage
+        self.defense = defense
+        self.description = description
+
+    def get_damage_multiplier(self, enemy_element):
+        if self.type != ItemType.WEAPON:
+            return 1.0
+        return EFFECTIVENESS.get((self.element, enemy_element), 1.0)
+
+
+class Weapon(Item):
+    def __init__(self, name, element, damage, description=""):
+        super().__init__(name, ItemType.WEAPON, element, damage, damage, 0, description)
+
+
+class HealthPotion(Item):
+    def __init__(self, name, heal_amount):
+        super().__init__(name, ItemType.HEALTH, Element.NORMAL,
+                         heal_amount, 0, 0, f"Heals {heal_amount} HP")
+
+
+class Armor(Item):
+    def __init__(self, name, defense, description=""):
+        super().__init__(name, ItemType.ARMOR, Element.NORMAL, 0, 0, defense, description)
+
