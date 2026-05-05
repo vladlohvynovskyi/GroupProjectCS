@@ -8,12 +8,15 @@ from config import (
     SCREEN_WIDTH, SCREEN_HEIGHT,
     TILE_VOID, TILE_FLOOR, TILE_WALL, TILE_DOOR, TILE_CHEST,
     TILE_TRAP, TILE_CAMPFIRE, TILE_STAIR,
-    COLOR_CAMPFIRE,
 )
 from enemy import Enemy
 
 
 class DungeonMap:
+    TRAP_FRAME_DURATION = 0.30
+    CAMPFIRE_FRAME_DURATION = 0.12
+    DIFFICULTY_PER_FLOOR = 0.15
+
     def __init__(self):
         self.tiles     = []
         self.rooms     = []
@@ -23,9 +26,19 @@ class DungeonMap:
         self.campfires = []
         self.staircase = None
         self.floor_variants = []
-        self.enemies = []  
+        self.enemies = []
+        self.floor = 1
 
-    def generate(self):
+        self.trap_anim_frame = 0
+        self.trap_anim_timer = 0.0
+        self.campfire_anim_frame = 0
+        self.campfire_anim_timer = 0.0
+
+    def _difficulty_mult(self):
+        return 1.0 + self.DIFFICULTY_PER_FLOOR * (self.floor - 1)
+
+    def generate(self, floor=1):
+        self.floor = floor
         self.tiles = []
         for row in range(MAP_ROWS):
             self.tiles.append([TILE_VOID] * MAP_COLS)
@@ -220,7 +233,7 @@ class DungeonMap:
 
         return reachable
 
-    def _add_locked_doors(self, max_locks=6):
+    def _add_locked_doors(self, max_locks=4):
         lockable = list(self.doors)
         random.shuffle(lockable)
         used_chests = set()
@@ -250,12 +263,13 @@ class DungeonMap:
         chests = []
         traps = []
         campfires = []
+        mult = self._difficulty_mult()
 
         for i, room in enumerate(self.rooms):
             rx, ry, rw, rh = room
 
             # Chests
-            if i > 0 and random.random() < 0.4:  # i > 0 to prevent spawning in the first room
+            if i > 0 and random.random() < 0.8:  # i > 0 to prevent spawning in the first room
                 cx = random.randint(rx, rx + rw - 1)
                 cy = random.randint(ry, ry + rh - 1)
                 if self.tiles[cy][cx] == TILE_FLOOR:
@@ -263,7 +277,7 @@ class DungeonMap:
                     chests.append({
                         "x": cx,
                         "y": cy,
-                        "contents": random.choice(["smth"]),
+                        "contents": random.choice(["smth", "torch"]),
                         "opened": False,
                         "room_index": i
                     })
@@ -277,7 +291,7 @@ class DungeonMap:
                     traps.append({
                         "x": tx,
                         "y": ty,
-                        "damage": random.randint(5, 15),
+                        "damage": max(1, int(random.randint(5, 15) * mult)),
                         "triggered": False,
                     })
 
@@ -315,6 +329,7 @@ class DungeonMap:
     
     def _spawn_enemies(self):
         """Spawn enemies in rooms (skip room 0 = player spawn)."""
+        mult = self._difficulty_mult()
         for i, room in enumerate(self.rooms):
             if i == 0:
                 continue
@@ -354,7 +369,7 @@ class DungeonMap:
                         else ["earth", "fire", "water"])
 
                 # Create enemy
-                enemy = Enemy(ex, ey, enemy_type)
+                enemy = Enemy(ex, ey, enemy_type, difficulty_mult=mult)
                 enemy.room_index = i
                 self.enemies.append(enemy)
     
@@ -384,6 +399,18 @@ class DungeonMap:
                 self.tiles[y][x] = TILE_FLOOR
                 return chest["contents"]
         return None
+
+    def update(self, dt):
+        """Advance shared tile animations"""
+        self.trap_anim_timer += dt
+        if self.trap_anim_timer >= self.TRAP_FRAME_DURATION:
+            self.trap_anim_timer -= self.TRAP_FRAME_DURATION
+            self.trap_anim_frame = (self.trap_anim_frame + 1) % 4
+
+        self.campfire_anim_timer += dt
+        if self.campfire_anim_timer >= self.CAMPFIRE_FRAME_DURATION:
+            self.campfire_anim_timer -= self.CAMPFIRE_FRAME_DURATION
+            self.campfire_anim_frame = (self.campfire_anim_frame + 1) % 6
 
     def trigger_trap(self, x, y):
         """Trigger the trap at (x, y) if present. Returns damage dealt, or None."""
@@ -426,12 +453,11 @@ class DungeonMap:
                 elif tile == TILE_TRAP:
                     variant = self.floor_variants[y][x]
                     screen.blit(assets.floor_tiles[variant], pos)
-                    screen.blit(assets.trap, pos)
+                    screen.blit(assets.trap_frames[self.trap_anim_frame], pos)
                 elif tile == TILE_CAMPFIRE:
                     variant = self.floor_variants[y][x]
                     screen.blit(assets.floor_tiles[variant], pos)
-                    center = (pixel_x + TILE_SIZE // 2, pixel_y + TILE_SIZE // 2)
-                    pygame.draw.circle(screen, COLOR_CAMPFIRE, center, 10)
+                    screen.blit(assets.campfire_frames[self.campfire_anim_frame], pos)
                 elif tile == TILE_STAIR:
                     variant = self.floor_variants[y][x]
                     screen.blit(assets.floor_tiles[variant], pos)

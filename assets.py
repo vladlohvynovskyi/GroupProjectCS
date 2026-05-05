@@ -2,13 +2,21 @@ import os
 
 import pygame
 
-from config import TILE_SIZE, ASSET_DIR, SCRIPT_DIR
+from config import TILE_SIZE, ASSET_DIR, UI_DIR, SCRIPT_DIR
 
 
 def load_sprite(filename, width=TILE_SIZE, height=TILE_SIZE):
     path = os.path.join(ASSET_DIR, filename)
     img = pygame.image.load(path).convert_alpha()
     return pygame.transform.scale(img, (width, height))
+
+
+def load_ui(filename, size=None):
+    path = os.path.join(UI_DIR, filename)
+    img = pygame.image.load(path).convert_alpha()
+    if size is not None:
+        img = pygame.transform.smoothscale(img, size)
+    return img
 
 
 class Assets:
@@ -19,8 +27,22 @@ class Assets:
         self.wall  = load_sprite("wall_mid.png")
         self.door      = load_sprite("doors_leaf_closed.png")
         self.chest     = load_sprite("chest_full_open_anim_f0.png")
-        self.trap      = load_sprite("floor_spikes_anim_f0.png")
+        self.trap_frames = [
+            load_sprite(f"floor_spikes_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
+            for i in range(4)
+        ]
         self.stairs    = load_sprite("floor_ladder.png")
+
+        # Campfire animation 
+        campfire_path = os.path.join(SCRIPT_DIR, "assets", "images", "dungeon", "32px fireplace.png")
+        campfire_sheet = pygame.image.load(campfire_path).convert_alpha()
+        self.campfire_frames = [
+            pygame.transform.scale(
+                campfire_sheet.subsurface((i * 32, 0, 32, 32)),
+                (TILE_SIZE, TILE_SIZE),
+            )
+            for i in range(6)
+        ]
         self.player_idle = [
             load_sprite(f"knight_m_idle_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
             for i in range(4)
@@ -77,3 +99,41 @@ class Assets:
         pygame.draw.rect(game.screen, (100, 80, 60), (x, y, width, height), 2)
         # Decorative top bar
         pygame.draw.rect(game.screen, (60, 45, 35), (x+2, y+2, width-4, 18))
+
+        # UI assets
+        self.ui_panel_tall   = load_ui("Menu01.png")
+        self.ui_panel_wide   = load_ui("Menu02.png")
+        self.ui_panel_settings = load_ui("PanelSettings.png")
+        self.ui_title_bar    = load_ui("Menu_Button.png")
+        self.ui_button       = load_ui("Button02.png")
+        self.ui_button_alt   = load_ui("Button03.png")
+        self.ui_close        = load_ui("Menu_Close.png")
+        self.ui_slider_track = load_ui("PanelSettings_Slider.png")
+        self.ui_slider_knob  = load_ui("PanelSettings_Slider_B.png")
+
+        # Healer NPC
+        healer_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "monk.png")
+        healer_sheet = pygame.image.load(healer_path).convert_alpha()
+        healer_frame = healer_sheet.subsurface((0, 0, 32, 32))
+        self.npc_healer = pygame.transform.scale(healer_frame, (TILE_SIZE, TILE_SIZE))
+
+        # Merchant NPC
+        merchant_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "Male1.png")
+        merchant_sheet = pygame.image.load(merchant_path).convert_alpha()
+        merchant_frame = merchant_sheet.subsurface((0, 0, 32, 32))
+        self.npc_merchant = pygame.transform.scale(merchant_frame, (TILE_SIZE, TILE_SIZE))
+
+        # Guide NPC
+        guide_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "Male2.png")
+        guide_sheet = pygame.image.load(guide_path).convert_alpha()
+        guide_frame = guide_sheet.subsurface((0, 0, 32, 32))
+        self.npc_guide = pygame.transform.scale(guide_frame, (TILE_SIZE, TILE_SIZE))
+
+        # Quest NPC
+        quest_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "Necromancer_creativekind-Sheet.png")
+        quest_sheet = pygame.image.load(quest_path).convert_alpha()
+        quest_frame = quest_sheet.subsurface((0, 0, 128, 128))
+        self.npc_quest = pygame.transform.scale(quest_frame, (TILE_SIZE, TILE_SIZE))
+
+        # Dark tint
+        self.npc_merchant.fill((180, 180, 180), special_flags=pygame.BLEND_RGB_MULT)

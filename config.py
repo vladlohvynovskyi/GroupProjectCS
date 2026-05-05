@@ -32,6 +32,7 @@ LIGHT_GRAY = (150, 150, 150)
 DARK_GRAY = (50, 50, 50)
 ORANGE = (255, 165, 0)
 
+
 # Tile types
 TILE_VOID = 0
 TILE_FLOOR = 1
@@ -48,7 +49,7 @@ MAX_ROOM_SIZE = 14
 MAX_ROOMS = 40
 
 # Light & darkness
-PLAYER_LIGHT_RADIUS = 200
+PLAYER_LIGHT_RADIUS = 130
 DARKNESS = 230
 
 # Minimap
@@ -60,4 +61,5 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(SCRIPT_DIR, "assets", "0x72_DungeonTilesetII_v1.7", "frames")
 ENEMY_SPRITE_DIR = os.path.join(SCRIPT_DIR, "assets", "images", "enemies")
 FONTS_DIR = os.path.join(SCRIPT_DIR, "assets", "fonts")
+UI_DIR = os.path.join(SCRIPT_DIR, "assets", "AssetsUIWerdantaN3", "PNG")
 

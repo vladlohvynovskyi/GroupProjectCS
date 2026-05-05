@@ -30,8 +30,9 @@ class Enemy:
             print(f"[Warning] Could not load sprite sheet {sheet_path}: {e}")
             return None
 
-    def __init__(self, tile_x, tile_y, enemy_type="basic", custom_sprite_path=None):
+    def __init__(self, tile_x, tile_y, enemy_type="basic", custom_sprite_path=None, difficulty_mult=1.0):
         # Tile position
+  
         self.current_tile_x = tile_x
         self.current_tile_y = tile_y
 
@@ -207,7 +208,12 @@ class Enemy:
             self.sprite_format = "grid"
             if not custom_sprite_path:
                 custom_sprite_path = os.path.join(ENEMY_SPRITE_DIR, "1hoursheet-removebg-preview.png.png")
-
+        
+        # Difficulty scaling 
+        self.max_hp = max(1, int(self.max_hp * difficulty_mult))
+        self.hp = self.max_hp
+        self.damage = max(1, int(self.damage * difficulty_mult))
+        self.xp_reward = max(1, int(self.xp_reward * difficulty_mult))
         self._init_body_parts()
 
         # --- Load sprites based on format ---
@@ -392,17 +398,6 @@ class Enemy:
             except:
                 pygame.draw.rect(fallback, (255, 255, 255), fallback.get_rect(), 2)
             self.frames_by_animation[anim_name] = [fallback]
-
-    def _create_fallback_for_animation(self, anim_name):
-        """Create a fallback sprite for a specific animation"""
-        fallback = pygame.Surface((TILE_SIZE, TILE_SIZE))
-        fallback.fill(self.color)
-        try:
-            from config import WHITE
-            pygame.draw.rect(fallback, WHITE, fallback.get_rect(), 2)
-        except:
-            pygame.draw.rect(fallback, (255, 255, 255), fallback.get_rect(), 2)
-        self.frames_by_animation[anim_name] = [fallback]
 
     # --- Movement / AI ---
 

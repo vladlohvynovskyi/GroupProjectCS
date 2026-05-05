@@ -32,6 +32,10 @@ class Player:
 
         self.escape_timer = 0.0  # seconds of post-escape invincibility
 
+        # Active torch state (light bonus that decays over time)
+        self.torch_time_left = 0.0
+        self.torch_radius_bonus = 0
+
         # Inventory
         self.inventory = []
         self.max_inventory = 5
@@ -41,9 +45,27 @@ class Player:
         self.status_effects = []  # List of StatusEffect objects
         self.poison_tick_timer = 0
         self.regen_tick_timer = 0
-
         # Starting equipment
         self._setup_starting_gear()
+
+        # Hunger system
+        self.max_hunger = 100
+        self.hunger = 100
+        self.hunger_timer = 0.0
+        self.starvation_timer = 0.0
+
+        #Sanity
+        self.max_sanity = 100 
+        self.sanity = 100 
+
+        #self.sanity_timer = 0.0
+        self.sanity_hunger_timer = 0.0
+        self.darkness_timer =0.0
+
+        self.combat_stress = 0
+        self.last_combat_time = 0.0
+        #self.last_damge_time = 0.0
+        #self.sanity_damage_timer = 0.0
       
     def _setup_starting_gear(self):
         """Give player starting items"""
@@ -77,19 +99,40 @@ class Player:
         if armor.type == ItemType.ARMOR and armor in self.inventory:
             self.equipped_armor = armor
 
-    def take_damage(self, damage):
-        # Apply defense multiplier from status effects
-        defense_mult = self.get_defense_multiplier()
-        damage = int(damage * defense_mult)
-        
-        # Armor reduces damage
-        if self.equipped_armor:
-            damage = max(1, damage - self.equipped_armor.defense)
-        self.hp -= damage
-        return self.hp <= 0
+    def take_damage(self, damage, reduce_hunger = True):
+            # Apply defense multiplier from status effects
+            defense_mult = self.get_defense_multiplier()
+            damage = int(damage * defense_mult)
+            # Armor reduces damage
+            if self.equipped_armor:
+                damage = max(1, damage - self.equipped_armor.defense)
+            self.hp -= damage
+
+            if reduce_hunger:
+                hunger_loss = max(1, damage //4)
+                self.hunger = max(0, self.hunger - hunger_loss)
+           # self.hp -= damage
+            #self.hunger = max(0, self.hunger - damage)
+
+            # Big damage causes sanity loss
+            if damage >= 25:
+                sanity_loss = max(5, damage //5)
+                self.sanity = max(0, self.sanity - sanity_loss)
+
+            return self.hp <= 0
 
     def heal(self, amount):
+        if self.sanity <= 20:
+            amount = int(amount * 0.5)
+        elif self.sanity <= 40:
+            amount = int(amount * 0.75)
+
         self.hp = min(self.max_hp, self.hp + amount)
+
+    def light_torch(self, torch):
+        # Stack remaining time so a fresh torch refreshes the light source
+        self.torch_time_left = max(self.torch_time_left, 0.0) + torch.duration
+        self.torch_radius_bonus = max(self.torch_radius_bonus, torch.radius_bonus)
 
     def gain_xp(self, amount):
         self.xp += amount
@@ -172,8 +215,11 @@ class Player:
             self.facing_left = False
 
         if self.is_moving:
-            new_x = self.x + dx * self.SPEED * dt
-            new_y = self.y + dy * self.SPEED * dt
+            speed = self.SPEED * self.get_hunger_speed_multiplier()
+            
+            new_x = self.x + dx * speed * dt
+            new_y = self.y + dy * speed * dt
+
             if self.can_move(tiles, new_x, self.y):
                 self.x = new_x
             if self.can_move(tiles, self.x, new_y):
@@ -181,6 +227,11 @@ class Player:
 
         if self.escape_timer > 0:
             self.escape_timer = max(0.0, self.escape_timer - dt)
+
+        if self.torch_time_left > 0:
+            self.torch_time_left = max(0.0, self.torch_time_left - dt)
+            if self.torch_time_left == 0.0:
+                self.torch_radius_bonus = 0
 
         frame_duration = self.RUN_FRAME_DURATION if self.is_moving else self.IDLE_FRAME_DURATION
         self.anim_timer += dt
@@ -227,6 +278,50 @@ class Player:
                 expired.append(effect.type)
                 self.status_effects.remove(effect)
         return expired 
+    def get_hunger_speed_multiplier(self):
+        if self.hunger <= 0:
+            return 0.45
+        elif self.hunger <=10:
+            return 0.55
+        elif self.hunger <=25:
+            return 0.75
+        elif self.hunger <=50:
+            return 0.9
+        return 1.0
+
+    def update_survival_hunger(self, dt):
+        self.hunger_timer += dt
+        if self.hunger_timer >= 20: 
+            self.hunger = max(0, self.hunger - 1)
+            self.hunger_timer = 0
+
+        if self.hunger <= 20:
+            self.starvation_timer += dt
+
+            if self.hunger == 0:
+                damage_interval = 5
+                damage_amount = 2
+
+            elif self.hunger <= 10:
+                damage_interval = 10
+                damage_amount = 1
+            else:
+                damage_interval = 20
+                damage_amount = 1
+
+
+
+            if self.starvation_timer >= damage_interval:
+                self.take_damage(damage_amount, reduce_hunger = False)
+                self.starvation_timer = 0
+        
+        else:
+            self.starvation_timer = 0
+
+    
+    def restore_hunger(self, amount):
+        self.hunger = min(self.max_hunger, self.hunger + amount)
+
     def draw(self, screen, camera_x: float, camera_y: float, assets) -> None:
         frames = assets.player_run if self.is_moving else assets.player_idle
         frame = frames[self.anim_frame]
@@ -236,5 +331,51 @@ class Player:
             int(self.x - camera_x) - TILE_SIZE // 2,
             int(self.y - camera_y) - TILE_SIZE // 2,
         ))
+
+    def update_sanity(self, dt):
+
+        #Hunger sanity loss
+        if self.hunger == 0:
+            self.sanity_hunger_timer += dt
+            if self.sanity_hunger_timer >= 5:
+                self.sanity = max(0, self.sanity - 3)
+                self.sanity_hunger_timer = 0
+        elif self.hunger <= 10:
+            self.sanity_hunger_timer += dt
+            if self.sanity_hunger_timer >= 10:
+                self.sanity = max(0, self.sanity - 1)
+                self.sanity_hunger_timer = 0
+        else:
+            self.sanity_hunger_timer = 0
+        
+        #Darkness sanity loss : No Torch for 2 Minutes
+        if self.torch_time_left <= 0:
+            self.darkness_timer += dt
+            if self.darkness_timer >= 120:
+                self.sanity = max(0, self.sanity - 1)
+                self.darkness_timer = 110
+        else:
+            self.darkness_timer = 0
+        
+
+    def record_combat_stress(self):
+        current_time = pygame.time.get_ticks()
+
+        if current_time - self.last_combat_time <= 15000:
+            self.combat_stress +=1
+        else:
+            self.combat_stress = 1
+        self.last_combat_time = current_time
+
+        if self.combat_stress == 3:
+            self.sanity = max(0, self.sanity - 5)
+        elif self.combat_stress >3:
+            self.sanity = max(0, self.sanity - 10)
+        
+
+        
+    def restore_sanity(self, amount):
+            self.sanity = min(self.max_sanity, self.sanity + amount)
+
 
     

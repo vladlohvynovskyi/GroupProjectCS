@@ -10,7 +10,7 @@ from config import (
 )
 from enums import GameState, ItemType, BodyPart, Element
 from elements import ELEMENT_COLORS
-from ui import draw_text, draw_ui_button, draw_ui_button_simple, draw_health_bar, draw_ui_health_bar_angria
+from ui import draw_text, draw_ui_button, draw_ui_button_simple, draw_health_bar, draw_ui_health_bar_angria, draw_button
 from minimap import draw_minimap
 from status import StatusType
 
@@ -25,19 +25,30 @@ def draw_darkness(game, camera_x, camera_y):
     darkness = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
     darkness.fill((0, 0, 0, DARKNESS))
 
-    # Light around player
     px = int(game.player.x - camera_x)
     py = int(game.player.y - camera_y)
-    _apply_light(darkness, px, py, PLAYER_LIGHT_RADIUS, DARKNESS)
 
-    # Light around campfires
+    light_radius = PLAYER_LIGHT_RADIUS
+
+    if game.player.hunger <= 10:
+        light_radius = int(light_radius * 0.65)
+    elif game.player.hunger <= 20:
+        light_radius = int(light_radius * 0.8)
+
+    if game.player.sanity <= 20:
+        light_radius = int(light_radius * 0.75)
+
+    if game.player.torch_time_left > 0:
+        light_radius += game.player.torch_radius_bonus
+
+    _apply_light(darkness, px, py, light_radius, DARKNESS)
+
     for cf in game.dungeon.campfires:
         cx = int(cf["x"] * TILE_SIZE + TILE_SIZE // 2 - camera_x)
         cy = int(cf["y"] * TILE_SIZE + TILE_SIZE // 2 - camera_y)
         _apply_light(darkness, cx, cy, cf["radius"], DARKNESS)
 
     game.screen.blit(darkness, (0, 0))
-
 
 def draw_exploration(game):
     """Draw the exploration mode"""
@@ -46,6 +57,14 @@ def draw_exploration(game):
     # Calculate camera
     camera_x = game.player.x - SCREEN_WIDTH // 2
     camera_y = game.player.y - SCREEN_HEIGHT // 2
+
+     #Sanity screen shake
+    if game.player.sanity <= 10:
+        camera_x += random.randint(-6, 6)
+        camera_y += random.randint(-6, 6)
+    elif game.player.sanity <= 20:
+        camera_x += random.randint(-3, 3)
+        camera_y += random.randint(-3, 3)
     
     # Draw dungeon
     game.dungeon.draw(game.screen, camera_x, camera_y, game.assets)
@@ -54,6 +73,12 @@ def draw_exploration(game):
     for enemy in game.dungeon.enemies:
         if enemy.hp > 0:
             enemy.draw(game.screen, camera_x, camera_y)
+
+    #Draw NPCs
+    for npc in game.npcs:
+        npc.draw(game.screen, camera_x, camera_y, game.assets)
+
+    
     
     # Draw player
     game.player.draw(game.screen, camera_x, camera_y, game.assets)
@@ -64,17 +89,72 @@ def draw_exploration(game):
     
     # Draw UI text
     draw_text(game, f"HP: {game.player.hp}/{game.player.max_hp}", 10, 10, RED)
-    draw_text(game, f"Floor: {game.floor}", 10, 50, WHITE)
-    draw_text(game, f"Level: {game.player.level} | XP: {game.player.xp}", 10, 90, WHITE)
+    draw_text(game, f"Hunger: {game.player.hunger}/{game.player.max_hunger}", 10, 40, YELLOW)
+    draw_text(game, f"Sanity: {game.player.sanity}/{game.player.max_sanity}", 10, 70, BLUE)
+    draw_text(game, f"Floor: {game.floor}", 10, 100, WHITE)
+    draw_text(game, f"Level: {game.player.level} | XP: {game.player.xp}", 10, 130, WHITE)
     
+     # Quest UI
+    if game.quest_active:
+        draw_text(
+            game,
+            f"Quest: Defeat enemies {game.quest_kills}/{game.quest_goal}",
+            10,
+            200,
+            YELLOW,
+            game.small_font
+        )
+
+    elif game.quest_completed:
+        draw_text(
+            game,
+            "Quest complete! Return to quest giver.",
+            10,
+            200,
+            GREEN,
+            game.small_font
+        )
+
     if game.player.equipped_weapon:
-        draw_text(game, f"Weapon: {game.player.equipped_weapon.name}", 35, 115, YELLOW, game.small_font)
+        draw_text(game, f"Weapon: {game.player.equipped_weapon.name}", 10, 170, YELLOW, game.small_font)
+
+    if game.player.torch_time_left > 0:
+        draw_text(game, f"Torch: {game.player.torch_time_left:0.1f}s",
+              10, 195, ORANGE, game.small_font)
+
+    warning_y = 225
+
+    if game.player.hunger == 0:
+        draw_text(game, "STARVING! Find food!", 10, warning_y, RED, game.small_font)
+        warning_y += 25
+    elif game.player.hunger <= 10:
+        draw_text(game, "CRITICAL HUNGER!", 10, warning_y, RED, game.small_font)
+        warning_y += 25
+    elif game.player.hunger <= 20:
+        draw_text(game, "Hunger is low", 10, warning_y, YELLOW, game.small_font)
+        warning_y += 25
+    
+    if game.player.torch_time_left <= 0 and game.player.darkness_timer >= 90:
+        draw_text(game, "It's too dark.... Find a torch", 10, warning_y, BLUE, game.small_font)
+        warning_y += 25
+    
+    if game.player.sanity == 0:
+        draw_text(game, "SANITY LOST!", 10, warning_y, RED)
+    elif game.player.sanity <= 20:
+        draw_text(game, "MENTAL BREAKDOWN!", 10, warning_y, RED)
+    elif game.player.sanity <= 40:
+        draw_text(game, "Sanity is low", 10, warning_y, BLUE)
+    
     
     # Draw inventory button
-    draw_ui_button(game, game.inventory_button, "Inventory", "title", 0, 0, False)
+    draw_button(game, game.inventory_button, "Inventory (I)")
+
+    #Show the messages on screen
+    for i, msg in enumerate(game.combat_log[-5:]):
+        draw_text(game, msg, 10, SCREEN_HEIGHT - 120 + i * 20, WHITE, game.small_font)
     
     # Draw controls hint
-    draw_text(game, "WASD: Move | E: Interact | I: Inventory", 
+    draw_text(game, "WASD: Move | E: Interact | I: Inventory",
               200, SCREEN_HEIGHT - 30, WHITE, game.small_font)
 
 
@@ -380,6 +460,8 @@ def draw_inventory(game):
                 item_text += f" (Heal: {item.value})"
             elif item.type == ItemType.ARMOR:
                 item_text += f" (DEF: {item.defense})"
+            elif item.type == ItemType.TORCH:
+                item_text += f" (Light: {int(item.duration)}s)"
             
             # Truncate if too long
             if len(item_text) > 40:
@@ -426,3 +508,26 @@ def draw_victory(game):
     draw_text(game, "Press SPACE to play again or ESC to quit",
               200, 450, WHITE, game.small_font)
 
+def draw_shop(game):
+    game.screen.fill(DARK_GRAY)
+
+    draw_text(game, "MERCHANT SHOP", 330, 30, YELLOW)
+    draw_text(game, f"Your XP: {game.player.xp}", 350, 75, WHITE)
+    for i, item in enumerate(game.shop_items):
+
+        y = 130 + i * 70
+        if i == game.selected_shop_index:
+            pygame.draw.rect(game.screen, (70, 70, 70), (150, y - 10, 600, 55))
+
+        color = YELLOW if i == game.selected_shop_index else WHITE
+        draw_text(game, item.name, 180, y, color)
+        draw_text(game, f"{game.shop_prices[i]} XP", 600, y, GREEN)
+       
+    draw_button(game, game.shop_buy_button, "Buy")
+    draw_button(game, game.shop_back_button, "Back")
+    draw_text(game, "W/S or UP/DOWN: Select | ENTER: Buy | ESC: Back",
+              220, 560, WHITE, game.small_font)
+    
+    # Warnings
+    for i, msg in enumerate(game.combat_log[-3:]):
+        draw_text(game, msg, 260, 610 + i * 22, WHITE, game.small_font)

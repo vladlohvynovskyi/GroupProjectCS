@@ -27,8 +27,6 @@ def draw_health_bar(game, x, y, width, height, current, maximum, color):
     # Border
     pygame.draw.rect(game.screen, WHITE, (x, y, width, height), 2)
 
-# Add these functions to ui.py
-
 def draw_ui_panel(game, x, y, width, height):
     """Simple clean panel (no assets needed)"""
     # Outer border
