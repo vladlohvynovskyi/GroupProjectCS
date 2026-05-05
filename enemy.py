@@ -379,25 +379,25 @@ class Enemy:
                 
                 if frames:
                     self.frames_by_animation[anim_name] = frames
-                    print(f"    ✓ Loaded {len(frames)} frames")
+                    print(f" Loaded {len(frames)} frames")
                 else:
-                    print(f"    ✗ Failed to load frames")
+                    print(f" Failed to load frames")
                     self._create_fallback_for_animation(anim_name)
                     
             except Exception as e:
                 print(f"[Warning] Could not load {anim_name}: {e}")
                 self._create_fallback_for_animation(anim_name)
 
-        def _create_fallback_for_animation(self, anim_name):
-            """Create a fallback sprite for a specific animation"""
-            fallback = pygame.Surface((TILE_SIZE, TILE_SIZE))
-            fallback.fill(self.color)
-            try:
-                from config import WHITE
-                pygame.draw.rect(fallback, WHITE, fallback.get_rect(), 2)
-            except:
-                pygame.draw.rect(fallback, (255, 255, 255), fallback.get_rect(), 2)
-            self.frames_by_animation[anim_name] = [fallback]
+    def _create_fallback_for_animation(self, anim_name):
+        """Create a fallback sprite for a specific animation"""
+        fallback = pygame.Surface((TILE_SIZE, TILE_SIZE))
+        fallback.fill(self.color)
+        try:
+            from config import WHITE
+            pygame.draw.rect(fallback, WHITE, fallback.get_rect(), 2)
+        except:
+            pygame.draw.rect(fallback, (255, 255, 255), fallback.get_rect(), 2)
+        self.frames_by_animation[anim_name] = [fallback]
 
     # --- Movement / AI ---
 

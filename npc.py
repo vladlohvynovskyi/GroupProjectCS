@@ -132,13 +132,13 @@ class NPC:
 
         elif self.role == "healer":
 
-            screen.blit(assets.npc_merchant, (sx, sy))  # also Male1
+            screen.blit(assets.npc_healer, (sx, sy))  # also Male1
 
 
         elif self.role == "guide":
             screen.blit(assets.npc_guide, (sx, sy))     # Male2
         elif self.role == "quest":
-            screen.blit(assets.npc_guide, (sx, sy))     # also Male2
+            screen.blit(assets.npc_quest, (sx, sy))     # also Male2
         else:
             pygame.draw.rect(screen, (180, 80, 220),
                             pygame.Rect(sx, sy, TILE_SIZE, TILE_SIZE))

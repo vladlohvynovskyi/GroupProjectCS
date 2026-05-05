@@ -8,8 +8,8 @@ class AudioManager:
         self.sounds = {}
         self.current_music = None
         self.music_position = 0.0
-        self.music_volume = 0.5
-        self.sfx_volume = 0.7
+        self.music_volume = 0.2
+        self.sfx_volume = 0.2
         self._load_sounds()
     
     def _load_sounds(self):
@@ -49,11 +49,9 @@ class AudioManager:
         
         # Other sounds
         sound_files = {
-            "enter_fight": "enter_fight.mp3",
-            "hurt": "hurt.wav",
             "death": "death.wav",
             "level_up": "level_up.wav",
-            "slime_death": "assets/sounds/slime_death.flac",
+            "slime_death": "slime_death.flac",
             "flying_monstrosity_death": "piggrunt2.wav",
             "bee_scared_death": "grunt1.wav",
             "battering_bat_death": "deathd.wav",

@@ -81,25 +81,6 @@ class Assets:
             self.ui_health = None
             self.ui_dialog = None
 
-    def draw_ui_panel(game, x, y, width, height):
-        """Draw decorative panel with corners"""
-        # Border
-        pygame.draw.rect(game.screen, (40, 35, 45), (x, y, width, height))
-        pygame.draw.rect(game.screen, (80, 70, 90), (x, y, width, height), 2)
-        # Inner dark area
-        pygame.draw.rect(game.screen, (20, 18, 25), (x+4, y+4, width-8, height-8))
-        # Corner decorations
-        for cx, cy in [(x, y), (x+width-10, y), (x, y+height-10), (x+width-10, y+height-10)]:
-            pygame.draw.line(game.screen, (120, 100, 80), (cx, cy), (cx+10, cy), 2)
-            pygame.draw.line(game.screen, (120, 100, 80), (cx, cy), (cx, cy+10), 2)
-
-    def draw_ui_dialog_box(game, x, y, width, height):
-        """Draw a dialog box for combat log"""
-        pygame.draw.rect(game.screen, (25, 22, 30), (x, y, width, height))
-        pygame.draw.rect(game.screen, (100, 80, 60), (x, y, width, height), 2)
-        # Decorative top bar
-        pygame.draw.rect(game.screen, (60, 45, 35), (x+2, y+2, width-4, 18))
-
         # UI assets
         self.ui_panel_tall   = load_ui("Menu01.png")
         self.ui_panel_wide   = load_ui("Menu02.png")

@@ -38,7 +38,7 @@ class Player:
 
         # Inventory
         self.inventory = []
-        self.max_inventory = 5
+        self.max_inventory = 12
         self.equipped_weapon = None
         self.equipped_armor = None
 

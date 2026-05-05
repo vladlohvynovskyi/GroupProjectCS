@@ -6,7 +6,7 @@ import pygame
 from config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS, TILE_SIZE,
     MAP_COLS, MAP_ROWS,
-    TILE_DOOR, TILE_CHEST, TILE_STAIR, FONTS_DIR, WHITE,
+    TILE_DOOR, TILE_CHEST, TILE_STAIR, TILE_FLOOR, FONTS_DIR, WHITE,
     YELLOW, RED, ORANGE
 )
 from enums import GameState, ItemType, BodyPart, Element
@@ -381,8 +381,6 @@ class Game:
             if hasattr(self, 'campfire_sound_playing') and self.campfire_sound_playing:
                 self.audio.stop_campfire_sound()
                 self.campfire_sound_playing = False
-                self.player.record_combat_stress()
-                break
 
     def _open_pause(self):
         self.prev_state = self.state
@@ -857,7 +855,20 @@ class Game:
                             # Equip armor
                             self.player.equip_armor(item)
                             self.combat_log.append(f"Equipped {item.name}")
-                
+                        elif item.type == ItemType.FOOD:
+                            # Consume food
+                            self.player.restore_hunger(item.value)
+                            self.player.inventory.pop(self.selected_item_index)
+                            self.combat_log.append(f"Used {item.name}, restored {item.value} hunger")
+                            if self.selected_item_index >= len(self.player.inventory):
+                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
+                        elif item.type == ItemType.SANITY:
+                            # Use sanity potion
+                            self.player.restore_sanity(item.value)
+                            self.player.inventory.pop(self.selected_item_index)
+                            self.combat_log.append(f"Used {item.name}, restored {item.value} sanity")
+                            if self.selected_item_index >= len(self.player.inventory):
+                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
                 # Drop button
                 elif self.drop_item_button.collidepoint(mouse_pos):
                     if self.selected_item_index < len(self.player.inventory):
@@ -903,6 +914,20 @@ class Game:
                             self.player.light_torch(item)
                             self.player.inventory.pop(self.selected_item_index)
                             self.combat_log.append(f"Lit {item.name} ({int(item.duration)}s)")
+                            if self.selected_item_index >= len(self.player.inventory):
+                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
+                        elif item.type == ItemType.FOOD:
+                            # Consume food
+                            self.player.restore_hunger(item.value)
+                            self.player.inventory.pop(self.selected_item_index)
+                            self.combat_log.append(f"Used {item.name}, restored {item.value} hunger")
+                            if self.selected_item_index >= len(self.player.inventory):
+                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
+                        elif item.type == ItemType.SANITY:
+                            # Use sanity potion
+                            self.player.restore_sanity(item.value)
+                            self.player.inventory.pop(self.selected_item_index)
+                            self.combat_log.append(f"Used {item.name}, restored {item.value} sanity")
                             if self.selected_item_index >= len(self.player.inventory):
                                 self.selected_item_index = max(0, len(self.player.inventory) - 1)
                 elif event.key == pygame.K_ESCAPE:
@@ -994,7 +1019,7 @@ class Game:
 
             elif self.state == GameState.COMBAT:
                 # Handle combat events
-                self.handle_combat(events)
+                self.handle_combat(events, dt)
 
                 # Draw combat
                 draw_combat(self)
@@ -1088,33 +1113,6 @@ class Game:
                 self.remove_npc(self.shop_npc)
                 self.shop_npc = None
                 self.state = GameState.EXPLORATION
-    
-    
-    def update_hallucination(self, dt):
-        if self.player.sanity > 20:
-            self.hallucination = None
-            self.hallucination_timer = 0.0
-            return
-
-        self.hallucination_timer += dt
-
-        if self.hallucination is None and self.hallucination_timer >= 5:
-            offset_x = random.choice([-3, -2, 2, 3]) * TILE_SIZE
-            offset_y = random.choice([-3, -2, 2, 3]) * TILE_SIZE
-
-            self.hallucination = {
-                "x": self.player.x + offset_x,
-                "y": self.player.y + offset_y,
-                "time": 2.5
-            }
-
-            self.hallucination_timer = 0.0
-
-        if self.hallucination is not None:
-            self.hallucination["time"] -= dt
-            if self.hallucination["time"] <= 0:
-                self.hallucination = None
-
 
     def spawn_npc(self):
         self.npcs = []
