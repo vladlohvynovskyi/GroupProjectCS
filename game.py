@@ -71,6 +71,7 @@ class Game:
         self.master_slider = Slider((slider_x, 260, slider_w, 20), value=0.8)
         self.music_slider  = Slider((slider_x, 340, slider_w, 20), value=0.6)
         self.sfx_slider    = Slider((slider_x, 420, slider_w, 20), value=0.7)
+        self._apply_volume_sliders()
 
         # UI button rectangles (shared between combat/inventory/exploration)
         self.attack_button    = pygame.Rect(640, 480, 220, 52)
@@ -436,11 +437,18 @@ class Game:
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self.state = GameState.EXPLORATION
 
+    def _apply_volume_sliders(self):
+        """Push slider values into the audio manager."""
+        master = self.master_slider.value
+        self.audio.set_music_volume(master * self.music_slider.value)
+        self.audio.set_sfx_volume(master * self.sfx_slider.value)
+
     def handle_options(self, events):
         for event in events:
             self.master_slider.handle_event(event)
             self.music_slider.handle_event(event)
             self.sfx_slider.handle_event(event)
+            self._apply_volume_sliders()
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.options_back_button.clicked(event.pos):
                     self._return_from_submenu()
@@ -539,7 +547,7 @@ class Game:
                 # Check buttons
                 if self.attack_button.collidepoint(mouse_pos):
                     self._player_attack()
-                elif self.run_button.collidepoint(mouse_pos):
+                elif self.run_button.collidepoint(mouse_pos) and self.combat_turn == "player":
                     self._attempt_run()
                 elif self.inventory_button.collidepoint(mouse_pos):
                     self.state = GameState.INVENTORY
@@ -718,7 +726,8 @@ class Game:
         escape_chance = min(0.9, base_chance + level_bonus)
         
         if random.random() < escape_chance:
-            self.combat_log.append(f"Escaped successfully!")
+            self.player.escape_timer = 3.0
+            self.combat_log.append("Escaped! (invincible for 3s)")
             self.state = GameState.EXPLORATION
             self.current_enemy = None
         else:

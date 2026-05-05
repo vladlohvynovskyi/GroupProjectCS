@@ -147,6 +147,7 @@ def draw_exploration(game):
     
     
     # Draw inventory button
+    game.inventory_button = pygame.Rect(640, 608, 220, 52)
     draw_button(game, game.inventory_button, "Inventory (I)")
 
     #Show the messages on screen

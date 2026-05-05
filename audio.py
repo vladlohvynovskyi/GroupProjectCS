@@ -125,6 +125,10 @@ class AudioManager:
         self.sfx_volume = max(0.0, min(1.0, volume))
         for sound in self.sounds.values():
             sound.set_volume(self.sfx_volume)
+        for sound in self.sword_sounds:
+            sound.set_volume(self.sfx_volume)
+        for sound in self.hurt_sounds:
+            sound.set_volume(self.sfx_volume)
 
     def play_hurt_sound(self):
       """Play a random hurt sound"""
