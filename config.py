@@ -60,5 +60,6 @@ MINIMAP_MARGIN = 8
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSET_DIR = os.path.join(SCRIPT_DIR, "assets", "0x72_DungeonTilesetII_v1.7", "frames")
 ENEMY_SPRITE_DIR = os.path.join(SCRIPT_DIR, "assets", "images", "enemies")
+FONTS_DIR = os.path.join(SCRIPT_DIR, "assets", "fonts")
 UI_DIR = os.path.join(SCRIPT_DIR, "assets", "AssetsUIWerdantaN3", "PNG")
 

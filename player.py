@@ -6,7 +6,7 @@ from config import (
 )
 from enums import Element, ItemType
 from items import Weapon, HealthPotion, Armor
-
+from status import StatusEffect
 
 class Player:
     SIZE  = TILE_SIZE - 12
@@ -42,6 +42,9 @@ class Player:
         self.equipped_weapon = None
         self.equipped_armor = None
 
+        self.status_effects = []  # List of StatusEffect objects
+        self.poison_tick_timer = 0
+        self.regen_tick_timer = 0
         # Starting equipment
         self._setup_starting_gear()
 
@@ -97,6 +100,9 @@ class Player:
             self.equipped_armor = armor
 
     def take_damage(self, damage, reduce_hunger = True):
+            # Apply defense multiplier from status effects
+            defense_mult = self.get_defense_multiplier()
+            damage = int(damage * defense_mult)
             # Armor reduces damage
             if self.equipped_armor:
                 damage = max(1, damage - self.equipped_armor.defense)
@@ -139,18 +145,24 @@ class Player:
         return False
 
     def calculate_damage(self, enemy_element):
-        if not self.equipped_weapon:
-            return 5  # Bare hands damage
-        
-        base_damage = self.equipped_weapon.damage + (self.level * 2)
-        multiplier = self.equipped_weapon.get_damage_multiplier(enemy_element)
-        
         # Critical hit chance (10%)
         #if random.random() < 0.1:
         #    return int(base_damage * multiplier * 2)
+        if not self.equipped_weapon:
+            base_damage = 5
+        else:
+            base_damage = self.equipped_weapon.damage + (self.level * 2)
+        
+        # Apply status effect modifiers
+        damage_multiplier = self.get_damage_multiplier()
+        base_damage = int(base_damage * damage_multiplier)
+        
+        # Element multiplier
+        multiplier = self.equipped_weapon.get_damage_multiplier(enemy_element) if self.equipped_weapon else 1.0
         
         return int(base_damage * multiplier)
 
+ 
 
     def tile_x(self) -> int:
         return int(self.x) // TILE_SIZE
@@ -203,17 +215,7 @@ class Player:
             self.facing_left = False
 
         if self.is_moving:
-
-            #new_x = self.x + dx * self.SPEED * dt
-            
-            #new_y = self.y + dy * self.SPEED * dt
-            #speed = self.SPEED
             speed = self.SPEED * self.get_hunger_speed_multiplier()
-
-            #if self.hunger <=10:
-                #speed *= 0.5
-            #elif self.hunger <= 20:
-                #speed *= 0.7
             
             new_x = self.x + dx * speed * dt
             new_y = self.y + dy * speed * dt
@@ -237,6 +239,45 @@ class Player:
             self.anim_timer -= frame_duration
             self.anim_frame = (self.anim_frame + 1) % 4
 
+    def add_status(self, effect_type, duration, value=0):
+        """Add a status effect to the player"""
+        # Check if already has this effect - refresh duration
+        for effect in self.status_effects:
+            if effect.type == effect_type:
+                effect.duration = max(effect.duration, duration)
+                return
+        self.status_effects.append(StatusEffect(effect_type, duration, value))
+
+    def remove_status(self, effect_type):
+        """Remove a specific status effect"""
+        self.status_effects = [e for e in self.status_effects if e.type != effect_type]
+
+    def has_status(self, effect_type):
+        """Check if player has a specific status effect"""
+        return any(e.type == effect_type for e in self.status_effects)
+
+    def get_damage_multiplier(self):
+        """Calculate total damage multiplier from status effects"""
+        multiplier = 1.0
+        for effect in self.status_effects:
+            multiplier *= effect.get_damage_modifier()
+        return multiplier
+
+    def get_defense_multiplier(self):
+        """Calculate total defense multiplier from status effects"""
+        multiplier = 1.0
+        for effect in self.status_effects:
+            multiplier *= effect.get_defense_modifier()
+        return multiplier
+
+    def update_status_effects(self):
+        """Update all status effects (call at end of turn)"""
+        expired = []
+        for effect in self.status_effects[:]:
+            if effect.tick():
+                expired.append(effect.type)
+                self.status_effects.remove(effect)
+        return expired 
     def get_hunger_speed_multiplier(self):
         if self.hunger <= 0:
             return 0.45
@@ -292,32 +333,6 @@ class Player:
         ))
 
     def update_sanity(self, dt):
-        # current_time = pygame.time.get_ticks()
-
-
-        # #Reset combat stress if the player had a break
-        # if current_time - self.last_combat_time > 8000:
-        #     self.combat_stress = 0
-
-        # #Condition 1: Hunger is 0
-        # if self.hunger == 0:
-        #     self.sanity_timer += dt
-        #     if self.sanity_timer >= 3:
-
-        #         self.sanity = max(0, self.sanity - 2)
-        #         self.sanity_timer = 0
-        # else:
-        #     self.sanity_timer = 0
-        # #Condition 3: Too many fights in a short time
-        # if self.combat_stress >= 3:
-        #     self.sanity_damage_timer += dt
-        #     if self.sanity_damage_timer >= 3:
-        #         self.sanity = max(0, self.sanity - 8)
-        #         self.sanity_damage_timer = 0
-        #         self.combat_stress = 0
-
-        # else:
-        #     self.sanity_damage_timer = 0
 
         #Hunger sanity loss
         if self.hunger == 0:
