@@ -167,12 +167,13 @@ def draw_exploration(game):
     draw_button(game, game.inventory_button, "Inventory (I)")
 
     #Show the messages on screen
-    for i, msg in enumerate(game.combat_log[-5:]):
-        draw_text(game, msg, 10, SCREEN_HEIGHT - 120 + i * 20, WHITE, game.small_font)
+    log_y = SCREEN_HEIGHT - 155
+    for i, msg in enumerate(game.combat_log[-4:]):
+        draw_text(game, msg, 10, log_y + i * 22, WHITE, game.small_font)
     
     # Draw controls hint
     draw_text(game, "WASD: Move | E: Interact | I: Inventory",
-              200, SCREEN_HEIGHT - 30, WHITE, game.small_font)
+              200, SCREEN_HEIGHT - 25, WHITE, game.small_font)
 
 
 def draw_combat(game):
@@ -455,7 +456,7 @@ def _draw_placeholder_enemy(game, enemy_rect, enemy, glow_color):
     pygame.draw.rect(game.screen, COLOR_BLACK, mouth_rect)
 
 def draw_inventory(game):
-    game.screen.fill(DARK_GRAY)
+    game.screen.fill((24, 21, 35))
     draw_text(game, "INVENTORY", 350, 20, YELLOW)
     draw_text(game,
         f"Slots: {len(game.player.inventory)}/{game.player.max_inventory}",
@@ -499,9 +500,14 @@ def draw_inventory(game):
                 draw_text(game, "[EQUIPPED ARMOR]", 550, 100 + i * 60,
                           BLUE, game.small_font)
 
-    draw_ui_button_simple(game, game.use_item_button, "Use/Equip", False)
-    draw_ui_button_simple(game, game.drop_item_button, "Drop", False)
-    draw_ui_button_simple(game, game.back_button, "Back", False)
+    # draw_ui_button_simple(game, game.use_item_button, "Use/Equip", False)
+    # draw_ui_button_simple(game, game.drop_item_button, "Drop", False)
+    # draw_ui_button_simple(game, game.back_button, "Back", False)
+    mouse_pos = pygame.mouse.get_pos()
+
+    draw_ui_button(game, game.use_item_button, "Use/Equip", "title", 4, 0, game.use_item_button.collidepoint(mouse_pos))
+    draw_ui_button(game, game.drop_item_button, "Drop", "title", 2, 0, game.drop_item_button.collidepoint(mouse_pos))
+    draw_ui_button(game, game.back_button, "Back", "title", 0, 0, game.back_button.collidepoint(mouse_pos))
 
     if game.player.keys:
         # draw_text(game, f"Keys: {', '.join(sorted(game.player.keys))}",
@@ -511,7 +517,7 @@ def draw_inventory(game):
 
 def draw_game_over(game):
     """Draw game over screen"""
-    game.screen.fill(COLOR_BLACK)
+    game.screen.fill((24, 21, 35))
     draw_text(game, "GAME OVER", 250, 250, RED,
               pygame.font.SysFont(None, 72))
     draw_text(game, f"You reached floor {game.floor}", 300, 350, WHITE)
@@ -521,7 +527,7 @@ def draw_game_over(game):
 
 def draw_victory(game):
     """Draw victory screen"""
-    game.screen.fill(DARK_GRAY)
+    game.screen.fill((24, 21, 35))
     draw_text(game, "VICTORY!", 300, 200, YELLOW,
               pygame.font.SysFont(None, 72))
     draw_text(game, "All enemies defeated!", 300, 300, GREEN)
