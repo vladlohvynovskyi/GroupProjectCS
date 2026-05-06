@@ -275,8 +275,8 @@ class Game:
                 if self.quest_active or self.quest_completed:
                     self.combat_log.append("Finish your quest and claim your reward before leaving!")
                 else:
-                 self._descend()
-                 break
+                    self._descend()
+                break
 
             elif tile == TILE_DOOR:
                 result = dungeon.open_door(check_x, check_y, player.keys)
@@ -543,6 +543,29 @@ class Game:
                             elif action == "quest_yes":
                                 npc = self.dialogue_npc
 
+                                # Verify the quest is achievable on this floor before committing
+                                # so the player can never stuck on an impossible quest.
+                                finish_button = [
+                                    {"text": "Finish Dialogue", "action": "finish", "rect": pygame.Rect(0, 0, 240, 50)}
+                                ]
+                                if npc.quest_type == "kill":
+                                    alive = sum(1 for e in self.dungeon.enemies if e.hp > 0)
+                                    if alive < npc.quest_goal:
+                                        self.dialogue_text = (
+                                            f"There aren't enough enemies left on this floor "
+                                            f"({alive}/{npc.quest_goal}). Come back to me on the next floor."
+                                        )
+                                        self.dialogue_buttons = finish_button
+                                        return
+                                elif npc.quest_type == "collect":
+                                    if not self.prepare_crystal_quest(npc.quest_goal):
+                                        self.dialogue_text = (
+                                            f"There aren't enough chests left on this floor "
+                                            f"to hide {npc.quest_goal} crystals. Come back next floor."
+                                        )
+                                        self.dialogue_buttons = finish_button
+                                        return
+
                                 self.quest_active = True
                                 self.quest_completed = False
                                 self.quest_kills = 0
@@ -553,14 +576,11 @@ class Game:
                                 if self.quest_type == "collect":
                                     self.player.crystal_bag = 0
                                     self.player.crystal_bag_max = self.quest_goal
-                                    self.prepare_crystal_quest(self.quest_goal)
                                     self.dialogue_text = f"Quest started. Collect {self.quest_goal} magic crystals, then return to me for your reward. Good luck."
                                 else:
                                     self.dialogue_text = f"Quest started. Defeat {self.quest_goal} enemies, then return to me for your reward. Good luck."
 
-                                self.dialogue_buttons = [
-                                    {"text": "Finish Dialogue", "action": "finish", "rect": pygame.Rect(0, 0, 240, 50)}
-                                ]
+                                self.dialogue_buttons = finish_button
                                 return
 
                             elif action == "quest_no":
@@ -1064,8 +1084,9 @@ class Game:
                 draw_controls(self)
 
             elif self.state == GameState.EXPLORATION:
-                # Update player movement
-                self.player.update(pygame.key.get_pressed(), dt, self.dungeon.tiles)
+                # Update player movement 
+                if self.dialogue_npc is None:
+                    self.player.update(pygame.key.get_pressed(), dt, self.dungeon.tiles)
 
                 # Update fog of war
                 
@@ -1296,9 +1317,10 @@ class Game:
                 continue
             crystal_chests.append(chest)
 
-        random.shuffle(crystal_chests)
+        if len(crystal_chests) < amount:
+            return False
 
+        random.shuffle(crystal_chests)
         for chest in crystal_chests[:amount]:
             chest["contents"] = "crystals"
-
-        return len(crystal_chests) >= amount
+        return True

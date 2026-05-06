@@ -1,5 +1,4 @@
 import pygame
-import os
 import random
 
 class AudioManager:
@@ -16,22 +15,6 @@ class AudioManager:
         self.sanity_channel = pygame.mixer.Channel(5)
         self.ghost_channel = pygame.mixer.Channel(6)
         self.sanity_combat_channel = pygame.mixer.Channel(7)
-        self.sanity_whisper = pygame.mixer.Sound(
-            os.path.join("assets", "sounds", "Crying_moaning_ambience_3.wav")
-        )
-
-        self.ghost_chior = pygame.mixer.Sound(
-            os.path.join("assets", "sounds", "Ghost chior.wav")
-        )
-
-        self.sanity_combat = pygame.mixer.Sound(
-            os.path.join("assets", "sounds", "Monster_grunt_long.wav")
-        )
-
-        self.sanity_whisper.set_volume(0.8)
-        self.ghost_chior.set_volume(0.7)
-
-        self.sanity_combat.set_volume(0.8)
     
     def _load_sounds(self):
         """Load sound effects"""
@@ -67,7 +50,21 @@ class AudioManager:
             self.sounds["campfire"].set_volume(self.sfx_volume)
         except Exception as e:
             print(f"Could not load fireplace.wav from music folder: {e}")
-        
+
+        # Sanity
+        sanity_files = {
+            "sanity_whisper": "Crying_moaning_ambience_3.wav",
+            "ghost_chior": "Ghost chior.wav",
+            "sanity_combat": "Monster_grunt_long.wav",
+        }
+        for name, filename in sanity_files.items():
+            try:
+                sound = pygame.mixer.Sound(f"assets/sounds/{filename}")
+                sound.set_volume(self.sfx_volume)
+                self.sounds[name] = sound
+            except Exception as e:
+                print(f"Could not load sanity sound: {filename} - {e}")
+
         # Other sounds
         sound_files = {
             "death": "death.wav",
@@ -120,10 +117,11 @@ class AudioManager:
             if self.current_music == "exploring" and pygame.mixer.music.get_busy():
                 self.music_position = pygame.mixer.music.get_pos() / 1000.0  # Convert ms to seconds
             
-            if sanity is not None and sanity < 35:
+            sanity_combat = self.sounds.get("sanity_combat")
+            if sanity is not None and sanity < 35 and sanity_combat is not None:
                 pygame.mixer.music.stop()
                 if not self.sanity_combat_channel.get_busy():
-                    self.sanity_combat_channel.play(self.sanity_combat, loops=-1)
+                    self.sanity_combat_channel.play(sanity_combat, loops=-1)
                 self.sanity_combat_channel.set_volume(0.8)
                 self.current_music = "sanity_combat"
             else:
@@ -230,16 +228,19 @@ class AudioManager:
             music_volume = self.music_volume
         pygame.mixer.music.set_volume(music_volume)
 
-        if sanity <= 35:
+        whisper = self.sounds.get("sanity_whisper")
+        ghost = self.sounds.get("ghost_chior")
+
+        if sanity <= 35 and whisper is not None:
             if not self.sanity_channel.get_busy():
-                self.sanity_channel.play(self.sanity_whisper, loops=-1)
+                self.sanity_channel.play(whisper, loops=-1)
             self.sanity_channel.set_volume(0.8)
         else:
             self.sanity_channel.stop()
-        if sanity <= 20:
+
+        if sanity <= 20 and ghost is not None:
             if not self.ghost_channel.get_busy():
-                self.ghost_channel.play(self.ghost_chior, loops=-1)
-         
+                self.ghost_channel.play(ghost, loops=-1)
             self.ghost_channel.set_volume(0.7)
         else:
             self.ghost_channel.stop()
