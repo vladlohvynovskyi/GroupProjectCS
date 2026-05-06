@@ -28,6 +28,7 @@ class DungeonMap:
         self.floor_variants = []
         self.enemies = []
         self.floor = 1
+        self.decorations = {} 
 
         self.trap_anim_frame = 0
         self.trap_anim_timer = 0.0
@@ -82,8 +83,9 @@ class DungeonMap:
         self.chests, self.traps, self.campfires = self._decorate_rooms()
         self._add_locked_doors(max_locks=6)
         self._place_staircase()
-        self.floor_variants = [[random.randint(0, 2) for _ in range(MAP_COLS)] for _ in range(MAP_ROWS)]
-        self._spawn_enemies()  
+        self._scatter_decorations()
+        self.floor_variants = [[random.randint(0, 7) for _ in range(MAP_COLS)] for _ in range(MAP_ROWS)]
+        self._spawn_enemies()
 
     def _overlaps(self, x, y, w, h):
         for room in self.rooms:
@@ -309,6 +311,22 @@ class DungeonMap:
 
         return chests, traps, campfires
 
+    def _scatter_decorations(self):
+        self.decorations = {}
+        if not self.rooms:
+            return
+        n_variants = 3  # must match len(assets.floor_decorations)
+        chance = 0.04
+        for i, (rx, ry, rw, rh) in enumerate(self.rooms):
+            if i == 0:
+                continue  # spawn room stays clean
+            for y in range(ry, ry + rh):
+                for x in range(rx, rx + rw):
+                    if self.tiles[y][x] != TILE_FLOOR:
+                        continue
+                    if random.random() < chance:
+                        self.decorations[(x, y)] = random.randint(0, n_variants - 1)
+
     def _place_staircase(self):
         rx, ry, rw, rh = self.rooms[-1]
 
@@ -442,6 +460,9 @@ class DungeonMap:
                 if tile == TILE_FLOOR:
                     variant = self.floor_variants[y][x]
                     screen.blit(assets.floor_tiles[variant], pos)
+                    deco_idx = self.decorations.get((x, y))
+                    if deco_idx is not None:
+                        screen.blit(assets.floor_decorations[deco_idx], pos)
                 elif tile == TILE_WALL:
                    screen.blit(assets.wall, pos)
                 elif tile == TILE_DOOR:

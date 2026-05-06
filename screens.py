@@ -16,9 +16,13 @@ from status import StatusType
 
 
 def _apply_light(surface, cx, cy, radius, max_alpha):
+    d = radius * 2
+    light_surf = pygame.Surface((d, d), pygame.SRCALPHA)
+    light_surf.fill((0, 0, 0, max_alpha))
     for r in range(radius, 0, -4):
         alpha = int(max_alpha * (r / radius) ** 2)
-        pygame.draw.circle(surface, (0, 0, 0, alpha), (cx, cy), r)
+        pygame.draw.circle(light_surf, (0, 0, 0, alpha), (radius, radius), r)
+    surface.blit(light_surf, (cx - radius, cy - radius), special_flags=pygame.BLEND_RGBA_MIN)
 
 
 def draw_darkness(game, camera_x, camera_y):

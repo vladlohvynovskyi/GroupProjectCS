@@ -21,9 +21,15 @@ def load_ui(filename, size=None):
 
 class Assets:
     def __init__(self):
-        self.floor     = load_sprite("floor_1.png")
-        self.floor_2   = load_sprite("floor_2.png")
-        self.floor_3   = load_sprite("floor_3.png")
+        self.floor_tiles = [
+            load_sprite(f"floor_{i}.png", TILE_SIZE, TILE_SIZE)
+            for i in range(1, 9)
+        ]
+        self.floor_decorations = [
+            load_sprite("skull.png", TILE_SIZE, TILE_SIZE),
+            load_sprite("hole.png", TILE_SIZE, TILE_SIZE),
+            load_sprite("bloodfx001_03.png", TILE_SIZE, TILE_SIZE),
+        ]
         self.wall  = load_sprite("wall_mid.png")
         self.door      = load_sprite("doors_leaf_closed.png")
         self.chest     = load_sprite("chest_full_open_anim_f0.png")
@@ -51,8 +57,6 @@ class Assets:
             load_sprite(f"knight_m_run_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
             for i in range(4)
         ]
-        self.floor_tiles = [self.floor, self.floor_2, self.floor_3]
-        
         #Combat UI assets
         self.ui_menu = None
         self.ui_health = None
