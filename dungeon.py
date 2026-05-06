@@ -279,7 +279,7 @@ class DungeonMap:
                     chests.append({
                         "x": cx,
                         "y": cy,
-                        "contents": random.choice(["smth", "torch"]),
+                        "contents": random.choice(["smth", "torch", "food", "sanity", "crystals"]),
                         "opened": False,
                         "room_index": i
                     })

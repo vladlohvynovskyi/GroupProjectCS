@@ -58,21 +58,26 @@ def draw_minimap(game):
                 ey = my + enemy.current_tile_y * MINIMAP_TILE + MINIMAP_TILE // 2
                 pygame.draw.rect(game.screen, RED,
                                  pygame.Rect(ex - 1, ey - 1, 3, 3))
-                
-    #NPC's quest dot
-    if game.quest_giver is not None and (game.quest_active or game.quest_completed):
-        qx = game.quest_giver.tile_x
-        qy = game.quest_giver.tile_y
+    
+    #NPC dots
+    for npc in game.npcs:
+        if game.revealed[npc.tile_y][npc.tile_x]:
+            nx = mx + npc.tile_x * MINIMAP_TILE + MINIMAP_TILE // 2
+            ny = my + npc.tile_y * MINIMAP_TILE + MINIMAP_TILE // 2
 
-        # Only show if the quest giver tile is revealed
-        if game.revealed[qy][qx]:
-            dot_x = mx + qx * MINIMAP_TILE + MINIMAP_TILE // 2
-            dot_y = my + qy * MINIMAP_TILE + MINIMAP_TILE // 2
-
+            #Quest giver npc with active quest is purple
+            if game.quest_giver == npc and (game.quest_active):
+                npc_color = (180, 0, 255) #purple
+                dot_size = 5
+            else:
+                npc_color = (0, 150, 255) #blue
+                dot_size = 3
             pygame.draw.rect(
                 game.screen,
-                (0, 150, 255), #Blue
-                pygame.Rect(dot_x - 1, dot_y - 1, 3, 3)
+                npc_color,
+                pygame.Rect(nx - dot_size // 2, ny - dot_size // 2, dot_size, dot_size)
             )
+                
+
 
 

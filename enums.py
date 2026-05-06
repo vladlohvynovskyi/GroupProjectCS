@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 
 class GameState(Enum):
@@ -28,6 +28,7 @@ class ItemType(Enum):
     FOOD = 3
     SANITY = 4
     TORCH = 5
+    QUEST = 6
 
 class BodyPart(Enum):
     HEAD = 0

@@ -114,6 +114,8 @@ class Game:
         self.quest_completed = False
         self.quest_kills = 0
         self.quest_goal = 0
+        #Different types of quest
+        self.quest_type = None #kill or collect
         #Accept or Not accept the quest choice
         self.awaiting_quest_choice = False
         self.quest_giver = None
@@ -262,8 +264,12 @@ class Game:
             tile = dungeon.tiles[check_y][check_x]
 
             if tile == TILE_STAIR:
-                self._descend()
-                break
+                #If quest is not finished
+                if self.quest_active and not self.quest_completed:
+                    self.combat_log.append("Finish your quest before leaving!")
+                else:
+                 self._descend()
+                 break
 
             elif tile == TILE_DOOR:
                 result = dungeon.open_door(check_x, check_y, player.keys)
@@ -304,7 +310,30 @@ class Game:
                         self.combat_log.append("Found Torch!")
                     else:
                         self.combat_log.append("Inventory full!")
-                break
+                elif found == "food":
+                    food = Food("Bread", random.randint(15, 35))
+                    if player.add_item(food):
+                        self.combat_log.append(f"Found Bread! Restores {food.value} hunger.")
+                    else:
+                        self.combat_log.append("Inventory full!")
+
+                elif found == "sanity":
+                    sanity_potion = SanityPotion("Sanity Potion", random.randint(25, 40))
+                    if player.add_item(sanity_potion):
+                        self.combat_log.append(f"Found Sanity Potion! Restores {sanity_potion.value} sanity.")
+                    else:
+                        self.combat_log.append("Inventory full!")
+                
+                elif found == "crystals":
+                    if self.quest_type == "collect":
+                        if self.player.crystal_bag < self.player.crystal_bag_max:
+                            self.player.crystal_bag += 1
+                            self.combat_log.append(f"Collected crystal ({self.player.crystal_bag}/{self.player.crystal_bag_max})")
+                        else:
+                            self.combat_log.append("Crystal bag is full!")
+                    else:
+                        self.combat_log.append("You found crystals, but you have no crystal quest.")
+                        break
 
     def _check_traps(self):
         player = self.player
@@ -497,6 +526,12 @@ class Game:
                         self.quest_active = True
                         self.quest_completed = False
                         self.quest_kills = 0
+
+                        if self.quest_type == "collect":
+                            self.player.crystal_bag = 0
+                            self.player.crystal_bag_max = self.quest_goal
+                            self.prepare_crystal_quest(self.quest_goal)
+
                         self.combat_log.append("Quest accepted!")
                         self.awaiting_quest_choice = False
                         return
@@ -504,8 +539,8 @@ class Game:
                     elif event.key == pygame.K_n:
                         self.combat_log.append("Quest refused.")
 
-                        #if self.quest_giver:
-                            #self.quest_giver.quest_refused = True
+                        if self.quest_giver:
+                            self.quest_giver.quest_refused = True
                         self.awaiting_quest_choice = False
                         self.quest_giver = None
                         return
@@ -675,11 +710,11 @@ class Game:
             self.audio.play_level_up_sound() 
         
         # Quest completed
-        if self.quest_active and not self.quest_completed:
-           self.quest_kills += 1
-           if self.quest_kills >= self.quest_goal:
+        if self.quest_active and self.quest_type == "kill" and not self.quest_completed:
+            self.quest_kills += 1
+            if self.quest_kills >= self.quest_goal:
               self.quest_completed = True
-              self.combat_log.append("Quest completed!")
+              self.combat_log.append("Quest completed! Return to the quest giver")
         # Remove enemy from dungeon
         if self.current_enemy in self.dungeon.enemies:
             self.dungeon.enemies.remove(self.current_enemy)
@@ -1010,6 +1045,11 @@ class Game:
                 
                 self.player.update_survival_hunger(dt)
                 self.player.update_sanity(dt)
+
+                if self.quest_active and self.quest_type == "collect":
+                    if self.player.crystal_bag >= self.quest_goaland and not self.quest_completed:
+                        self.quest_completed = True
+                        self.combat_log.append("Quest completed! Return to the quest giver.")
                 
                 # Update fog of war (kept from main.py)
                 self.update_fog()
@@ -1133,9 +1173,8 @@ class Game:
             ("Guide", ["Stay close to the light.", "Doors may hide danger."], "guide"),
         ]
 
-        npc_count = random.randint(2, 5) #NPC AMOUNT
-        #npc_count = min(5, 2 + self.floor // 2) #Another option
-
+        #npc_count = min(len(safe_rooms), random.randint(4, 7)) #NPC AMOUNT
+        
         possible_rooms = self.dungeon.rooms[1:]
 
         safe_rooms = []
@@ -1150,7 +1189,7 @@ class Game:
 
             if not has_enemy:
                 safe_rooms.append(room)
-
+        npc_count = min(len(safe_rooms), random.randint(4, 7)) #NPC AMOUNT
         random.shuffle(safe_rooms)
         rooms_to_use = safe_rooms[:npc_count]
 
@@ -1194,3 +1233,20 @@ class Game:
     def remove_npc(self, npc):
         if npc in self.npcs:
             self.npcs.remove(npc)
+
+    def prepare_crystal_quest(self, amount):
+        crystal_chests = []
+
+        for chest in self.dungeon.chests:
+            if chest["opened"]:
+                continue
+            if isinstance(chest["contents"], str) and chest["contents"].startswith("key_"):
+                continue
+            crystal_chests.append(chest)
+
+        random.shuffle(crystal_chests)
+
+        for chest in crystal_chests[:amount]:
+            chest["contents"] = "crystals"
+
+        return len(crystal_chests) >= amount
