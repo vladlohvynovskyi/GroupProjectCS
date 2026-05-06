@@ -29,7 +29,8 @@ def draw_darkness(game, camera_x, camera_y):
     py = int(game.player.y - camera_y)
 
     light_radius = PLAYER_LIGHT_RADIUS
-
+    
+    #Too low hunger makes the game darker (vision drops)
     if game.player.hunger <= 10:
         light_radius = int(light_radius * 0.65)
     elif game.player.hunger <= 20:
@@ -96,21 +97,32 @@ def draw_exploration(game):
     
      # Quest UI
     if game.quest_active:
-        draw_text(
+        if game.quest_type == "kill":
+            draw_text(
+                game,
+                f"Quest: Defeat enemies {game.quest_kills}/{game.quest_goal}",
+                10,
+                225,
+                YELLOW,
+                game.small_font
+            )
+        elif game.quest_type == "collect":
+            draw_text(
             game,
-            f"Quest: Defeat enemies {game.quest_kills}/{game.quest_goal}",
-            10,
-            200,
-            YELLOW,
+            f"Quest: Collect crystals {game.player.crystal_bag}/{game.player.crystal_bag_max}",
+            10, 
+            225, 
+            BLUE, 
             game.small_font
         )
+    
 
     elif game.quest_completed:
         draw_text(
             game,
             "Quest complete! Return to quest giver.",
             10,
-            200,
+            225,
             GREEN,
             game.small_font
         )
@@ -122,7 +134,7 @@ def draw_exploration(game):
         draw_text(game, f"Torch: {game.player.torch_time_left:0.1f}s",
               10, 195, ORANGE, game.small_font)
 
-    warning_y = 225
+    warning_y = 255
 
     if game.player.hunger == 0:
         draw_text(game, "STARVING! Find food!", 10, warning_y, RED, game.small_font)
@@ -463,6 +475,10 @@ def draw_inventory(game):
                 item_text += f" (DEF: {item.defense})"
             elif item.type == ItemType.TORCH:
                 item_text += f" (Light: {int(item.duration)}s)"
+            elif item.type == ItemType.FOOD:
+                item_text += f" (Hunger: {item.value})"
+            elif item.type == ItemType.SANITY:
+                item_text += f" (Sanity: {item.value})"
             
             # Truncate if too long
             if len(item_text) > 40:
@@ -484,8 +500,10 @@ def draw_inventory(game):
     draw_ui_button_simple(game, game.back_button, "Back", False)
 
     if game.player.keys:
-        draw_text(game, f"Keys: {', '.join(sorted(game.player.keys))}",
-                  100, 500, YELLOW, game.small_font)
+        # draw_text(game, f"Keys: {', '.join(sorted(game.player.keys))}",
+        #           100, 565, YELLOW, game.small_font)
+        keys_text = f"Keys: {', '.join(sorted(game.player.keys))}"
+        draw_text(game, keys_text[:55], 100, 565, YELLOW, game.small_font)
 
 def draw_game_over(game):
     """Draw game over screen"""

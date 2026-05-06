@@ -48,6 +48,10 @@ class Player:
         # Starting equipment
         self._setup_starting_gear()
 
+        #Crystal bag
+        self.crystal_bag = 0
+        self.crystal_bag_max = 0
+
         # Hunger system
         self.max_hunger = 100
         self.hunger = 100
@@ -64,8 +68,8 @@ class Player:
 
         self.combat_stress = 0
         self.last_combat_time = 0.0
-        #self.last_damge_time = 0.0
-        #self.sanity_damage_timer = 0.0
+       
+       
       
     def _setup_starting_gear(self):
         """Give player starting items"""
@@ -108,6 +112,7 @@ class Player:
                 damage = max(1, damage - self.equipped_armor.defense)
             self.hp -= damage
 
+            # Damage causes hunger loss
             if reduce_hunger:
                 hunger_loss = max(1, damage //4)
                 self.hunger = max(0, self.hunger - hunger_loss)
@@ -115,8 +120,8 @@ class Player:
             #self.hunger = max(0, self.hunger - damage)
 
             # Big damage causes sanity loss
-            if damage >= 25:
-                sanity_loss = max(5, damage //5)
+            if damage >= 20:
+                sanity_loss = max(8, damage //4)
                 self.sanity = max(0, self.sanity - sanity_loss)
 
             return self.hp <= 0
@@ -139,6 +144,7 @@ class Player:
         # Level up every 100 XP
         if self.xp >= self.level * 100:
             self.level += 1
+            self.max_hp = 100
             self.max_hp += 20
             self.hp = self.max_hp
             return True
@@ -279,6 +285,7 @@ class Player:
                 self.status_effects.remove(effect)
         return expired 
     def get_hunger_speed_multiplier(self):
+        #Low hunger slows the player
         if self.hunger <= 0:
             return 0.45
         elif self.hunger <=10:
@@ -291,10 +298,12 @@ class Player:
 
     def update_survival_hunger(self, dt):
         self.hunger_timer += dt
+        #Hunger drops every 20 seconds
         if self.hunger_timer >= 20: 
             self.hunger = max(0, self.hunger - 1)
             self.hunger_timer = 0
 
+        # Low hunger slowly damage health
         if self.hunger <= 20:
             self.starvation_timer += dt
 
@@ -334,26 +343,28 @@ class Player:
 
     def update_sanity(self, dt):
 
-        #Hunger sanity loss
-        if self.hunger == 0:
+        #Very low hunger slowly drops sanity
+        if self.hunger <= 40:
             self.sanity_hunger_timer += dt
-            if self.sanity_hunger_timer >= 5:
+
+            if self.sanity_hunger_timer >= 10:
                 self.sanity = max(0, self.sanity - 3)
                 self.sanity_hunger_timer = 0
-        elif self.hunger <= 10:
-            self.sanity_hunger_timer += dt
-            if self.sanity_hunger_timer >= 10:
-                self.sanity = max(0, self.sanity - 1)
-                self.sanity_hunger_timer = 0
-        else:
+
+        # elif self.hunger <= 10:
+        #     self.sanity_hunger_timer += dt
+        #     if self.sanity_hunger_timer >= 10:
+        #         self.sanity = max(0, self.sanity - 1)
+        #         self.sanity_hunger_timer = 0
+        # else:
             self.sanity_hunger_timer = 0
         
-        #Darkness sanity loss : No Torch for 2 Minutes
+        #Darkness sanity loss : No Torch for 20 seconds
         if self.torch_time_left <= 0:
             self.darkness_timer += dt
-            if self.darkness_timer >= 120:
-                self.sanity = max(0, self.sanity - 1)
-                self.darkness_timer = 110
+            if self.darkness_timer >= 20:
+                self.sanity = max(0, self.sanity - 4)
+                self.darkness_timer = 0
         else:
             self.darkness_timer = 0
         

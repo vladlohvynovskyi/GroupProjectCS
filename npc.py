@@ -43,8 +43,8 @@ class NPC:
             if not hasattr(self, "shop_items"):
                 possible_items = [
                     (HealthPotion("Health Potion", 30), 30),
-                    (Food("Bread", 30), 20),
-                    (SanityPotion("Sanity Potion", 30), 40),
+                    (Food("Bread", random.randint(20, 40)), 20),
+                    (SanityPotion("Sanity Potion", random.randint(25, 40)), 40),
                     (Torch(), 25),
                     (Armor("Leather Armor", 5, "Better protection"), 50),
                 ]
@@ -70,8 +70,15 @@ class NPC:
             return
 
         if self.role == "quest":
+
             if not hasattr(self, "quest_goal"):
-                self.quest_goal = random.choice([3, 5])
+                self.quest_type = random.choice(["kill", "collect"])
+
+                if self.quest_type == "kill":
+                    self.quest_goal = random.choice([3, 5])
+                else:
+                    self.quest_goal = random.choice([3, 5])
+
                 self.quest_reward_xp = self.quest_goal * 25
                 self.quest_finished = False
                 self.quest_refused = False
@@ -83,10 +90,21 @@ class NPC:
                 game.awaiting_quest_choice = True
                 game.quest_giver = self
                 game.quest_goal = self.quest_goal
-                game.combat_log.append(
-                    f"{self.name}: Defeat {self.quest_goal} enemies? Press Y to accept or N to refuse."
-                )
+                game.quest_type = self.quest_type
+
+                if self.quest_type == "kill":
+                    game.combat_log.append(
+                        f"{self.name}: Defeat {self.quest_goal} enemies? Press Y to accept or N to refuse."
+                    )
+                else:
+                    game.player.crystal_bag = 0
+                    game.player.crystal_bag_max = self.quest_goal
+                    #game.prepare_crystal_quest(self.quest_goal)
+                    game.combat_log.append(
+                        f"{self.name}: Collect {self.quest_goal} magic crystals? Press Y to accept or N to refuse."
+                    )
                 return
+            
 
             if game.quest_completed and game.quest_giver == self:
                 game.combat_log.append(
@@ -97,9 +115,12 @@ class NPC:
 
                 reward = random.choice([
                     HealthPotion("Health Potion", 30),
+                    Food("Bread", random.randint(20, 40)),
+                    SanityPotion("Sanity Potion", random.randint(25, 40)),
                     Torch(),
                     Armor("Leather Armor", 5, "Quest reward armor"),
                 ])
+
                 if game.player.add_item(reward):
                     game.combat_log.append(f"Quest reward: {reward.name}")
                 else:
@@ -112,13 +133,21 @@ class NPC:
                 game.quest_completed = False
                 game.quest_kills = 0
                 game.quest_goal = 0
+                game.quest_type = None
                 game.quest_giver = None
+                game.player.crystal_bag = 0
+                game.player.crystal_bag_max = 0
                 return
 
             if game.quest_active and game.quest_giver == self:
-                game.combat_log.append(
-                    f"{self.name}: Progress {game.quest_kills}/{game.quest_goal} enemies."
-                )
+                if game.quest_type == "kill":
+                    game.combat_log.append(
+                        f"{self.name}: Progress {game.quest_kills}/{game.quest_goal} enemies."
+                    )
+                else:
+                    game.combat_log.append(
+                        f"{self.name}: Progress {game.player.crystal_bag}/{game.player.crystal_bag_max} crystals."
+                    )
                 return
 
             game.combat_log.append(f"{self.name}: Finish your other quest first.")

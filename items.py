@@ -54,3 +54,7 @@ class SanityPotion(Item):
     def __init__(self, name, restore_amount):
         super().__init__(name, ItemType.SANITY, Element.NORMAL,
                          restore_amount, 0, 0, f"Restores {restore_amount} sanity")
+
+class MagicCrystal(Item):
+   def __init__(self):
+       super().__init__("Magic Crystal", ItemType.QUEST, Element.NORMAL, 0, 0, 0, "crystal")
