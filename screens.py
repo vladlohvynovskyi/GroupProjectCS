@@ -99,8 +99,8 @@ def draw_exploration(game):
     draw_text(game, f"Floor: {game.floor}", 10, 100, WHITE)
     draw_text(game, f"Level: {game.player.level} | XP: {game.player.xp}", 10, 130, WHITE)
     
-     # Quest UI
-    if game.quest_active:
+    #Quest UI
+    if game.quest_active or game.quest_completed:
         if game.quest_type == "kill":
             draw_text(
                 game,
@@ -112,54 +112,50 @@ def draw_exploration(game):
             )
         elif game.quest_type == "collect":
             draw_text(
-            game,
-            f"Quest: Collect crystals {game.player.crystal_bag}/{game.player.crystal_bag_max}",
-            10, 
-            225, 
-            BLUE, 
-            game.small_font
-        )
-    
+                game,
+                f"Quest: Collect crystals {game.player.crystal_bag}/{game.player.crystal_bag_max}",
+                10,
+                225,
+                BLUE,
+                game.small_font
+            )
 
-    elif game.quest_completed:
-        draw_text(
-            game,
-            "Quest complete! Return to quest giver.",
-            10,
-            225,
-            GREEN,
-            game.small_font
-        )
-
-    if game.player.equipped_weapon:
-        draw_text(game, f"Weapon: {game.player.equipped_weapon.name}", 10, 170, YELLOW, game.small_font)
-
-    if game.player.torch_time_left > 0:
-        draw_text(game, f"Torch: {game.player.torch_time_left:0.1f}s",
-              10, 195, ORANGE, game.small_font)
-
-    warning_y = 255
+        if game.quest_completed:
+            draw_text(
+                game,
+                "Quest complete! Return to quest giver.",
+                10,
+                250,
+                GREEN,
+                game.small_font
+            )
+    # Warnings in bottom-middle
+    warning_messages = []
 
     if game.player.hunger == 0:
-        draw_text(game, "STARVING! Find food!", 10, warning_y, RED, game.small_font)
-        warning_y += 25
+        warning_messages.append(("STARVING! Find food!", RED))
     elif game.player.hunger <= 10:
-        draw_text(game, "CRITICAL HUNGER!", 10, warning_y, RED, game.small_font)
-        warning_y += 25
+        warning_messages.append(("CRITICAL HUNGER!", RED))
     elif game.player.hunger <= 20:
-        draw_text(game, "Hunger is low", 10, warning_y, YELLOW, game.small_font)
-        warning_y += 25
-    
+        warning_messages.append(("Hunger is low", YELLOW))
     if game.player.torch_time_left <= 0 and game.player.darkness_timer >= 90:
-        draw_text(game, "It's too dark.... Find a torch", 10, warning_y, BLUE, game.small_font)
-        warning_y += 25
-    
+        warning_messages.append(("It's too dark.... Find a torch", BLUE))
+
+
     if game.player.sanity == 0:
-        draw_text(game, "SANITY LOST!", 10, warning_y, RED)
+
+        warning_messages.append(("SANITY LOST!", RED))
     elif game.player.sanity <= 20:
-        draw_text(game, "MENTAL BREAKDOWN!", 10, warning_y, RED)
+        warning_messages.append(("MENTAL BREAKDOWN!", RED))
     elif game.player.sanity <= 40:
-        draw_text(game, "Sanity is low", 10, warning_y, BLUE)
+        warning_messages.append(("Sanity is low", BLUE))
+
+    warning_y = SCREEN_HEIGHT - 250
+    for text, color in warning_messages:
+        text_surf = game.medium_font.render(text, True, color)
+        text_x = SCREEN_WIDTH // 2 - text_surf.get_width() // 2
+        game.screen.blit(text_surf, (text_x, warning_y))
+        warning_y += 32
     
     
     # Draw inventory button
@@ -561,6 +557,7 @@ def draw_inventory(game):
     if game.player.keys:
         keys_text = f"Keys: {', '.join(sorted(game.player.keys))}"
         draw_text(game, keys_text[:55], panel_rect.x + 330, panel_rect.y + 470, YELLOW, game.small_font)
+
 def draw_game_over(game):
     """Draw game over screen"""
     game.screen.fill((24, 21, 35))
@@ -632,6 +629,12 @@ def draw_shop(game):
         color = YELLOW if real_i == game.selected_shop_index else WHITE
         draw_text(game, item.name, shop_box.x + 25, y, color, game.small_font)
         draw_text(game, f"{game.shop_prices[real_i]} XP", shop_box.x + 335, y, GREEN, game.small_font)
+
+
+    if hasattr(game, "shop_message") and game.shop_message:
+        msg_surf = game.small_font.render(game.shop_message, True, YELLOW)
+        msg_x = panel_rect.centerx - msg_surf.get_width() // 2
+        game.screen.blit(msg_surf, (msg_x, panel_rect.y + 385))
 
     # Buttons
     game.shop_buy_button = pygame.Rect(panel_rect.x + 370, panel_rect.y + 405, 170, 50)

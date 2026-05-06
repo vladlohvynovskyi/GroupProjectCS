@@ -144,9 +144,11 @@ class Player:
         # Level up every 100 XP
         if self.xp >= self.level * 100:
             self.level += 1
-            self.max_hp = 100
-            self.max_hp += 20
-            self.hp = self.max_hp
+
+            self.max_hp += 10
+            #self.max_hp += 20
+
+            self.hp = min(self.max_hp, self.hp + 10)
             return True
         return False
 
