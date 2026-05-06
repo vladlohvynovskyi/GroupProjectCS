@@ -81,10 +81,6 @@ class Game:
         self.drop_item_button = pygame.Rect(300, 500, 150, 40)
         self.back_button      = pygame.Rect(600, 500, 150, 40)
 
-        #NPCs
-        #self.npcs = []
-        #self.spawn_npc()
-
         
         self.current_enemy = None
         self.combat_message = ""
@@ -125,6 +121,11 @@ class Game:
         self.healer_npc = None
 
         self._start_new_run()
+
+        #Guide NPC
+        self.dialogue_npc = None
+        self.dialogue_text = ""
+        self.dialogue_buttons = []
 
     def _start_new_run(self):
         """Reset world state for a fresh playthrough."""
@@ -191,6 +192,10 @@ class Game:
 
         self.hallucination_timer = 0.0
         self.hallucination = None
+
+        self.dialogue_npc = None
+        self.dialogue_text = ""
+        self.dialogue_buttons = []
 
 
     def update_fog(self):
@@ -265,8 +270,8 @@ class Game:
 
             if tile == TILE_STAIR:
                 #If quest is not finished
-                if self.quest_active and not self.quest_completed:
-                    self.combat_log.append("Finish your quest before leaving!")
+                if self.quest_active or self.quest_completed:
+                    self.combat_log.append("Finish your quest and claim your reward before leaving!")
                 else:
                  self._descend()
                  break
@@ -498,54 +503,79 @@ class Game:
         self._check_combat_trigger()
         self._check_traps()
         self._check_campfire_proximity()
-   
+
+        if self.dialogue_npc is not None:
+            for event in events:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    for button in self.dialogue_buttons:
+                        if button["rect"].collidepoint(event.pos):
+                            action = button["action"]
+
+                            if action == "finish":
+                                self.dialogue_npc = None
+                                self.dialogue_text = ""
+                                self.dialogue_buttons = []
+                                return
+
+                            elif action == "heal_yes":
+                                if self.player.hp >= self.player.max_hp:
+                                    self.dialogue_text = "Sorry, I cannot heal you. Your health is already full."
+                                else:
+                                    self.player.heal(50)
+                                    self.dialogue_text = "There. I restored 50 HP. Stay safe in the depths."
+                                    self.remove_npc(self.dialogue_npc)
+
+                                self.dialogue_buttons = [
+                                    {"text": "Finish Dialogue", "action": "finish", "rect": pygame.Rect(0, 0, 240, 50)}
+                                ]
+                                return
+
+                            elif action == "heal_no":
+                                self.dialogue_text = "Very well. Come back if your wounds grow worse."
+                                self.dialogue_buttons = [
+                                    {"text": "Finish Dialogue", "action": "finish", "rect": pygame.Rect(0, 0, 240, 50)}
+                                ]
+                                return
+
+                            elif action == "quest_yes":
+                                npc = self.dialogue_npc
+
+                                self.quest_active = True
+                                self.quest_completed = False
+                                self.quest_kills = 0
+                                self.quest_giver = npc
+                                self.quest_goal = npc.quest_goal
+                                self.quest_type = npc.quest_type
+
+                                if self.quest_type == "collect":
+                                    self.player.crystal_bag = 0
+                                    self.player.crystal_bag_max = self.quest_goal
+                                    self.prepare_crystal_quest(self.quest_goal)
+                                    self.dialogue_text = f"Quest started. Collect {self.quest_goal} magic crystals, then return to me for your reward. Good luck."
+                                else:
+                                    self.dialogue_text = f"Quest started. Defeat {self.quest_goal} enemies, then return to me for your reward. Good luck."
+
+                                self.dialogue_buttons = [
+                                    {"text": "Finish Dialogue", "action": "finish", "rect": pygame.Rect(0, 0, 240, 50)}
+                                ]
+                                return
+
+                            elif action == "quest_no":
+                                self.dialogue_npc = None
+                                self.dialogue_text = ""
+                                self.dialogue_buttons = []
+                                return
+
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    self.dialogue_npc = None
+                    self.dialogue_text = ""
+                    self.dialogue_buttons = []
+                    return
+
+            return
+
         for event in events:
             if event.type == pygame.KEYDOWN:
-
-                if self.awaiting_heal_choice:
-                    if event.key == pygame.K_y:
-                        if self.healer_npc:
-                            if self.player.hp >= self.player.max_hp:
-                                self.combat_log.append("Healer: Sorry, I can't heal you now.")
-                            else:
-                                self.player.heal(50)
-                                self.combat_log.append("Healer restored 50 HP.")
-                                self.remove_npc(self.healer_npc)
-
-                        self.awaiting_heal_choice = False
-                        self.healer_npc = None
-                        return
-
-                    elif event.key == pygame.K_n:
-                        self.combat_log.append("Healing refused.")
-                        self.awaiting_heal_choice = False
-                        self.healer_npc = None
-                        return
-
-                if self.awaiting_quest_choice:
-                    if event.key == pygame.K_y:
-                        self.quest_active = True
-                        self.quest_completed = False
-                        self.quest_kills = 0
-
-                        if self.quest_type == "collect":
-                            self.player.crystal_bag = 0
-                            self.player.crystal_bag_max = self.quest_goal
-                            self.prepare_crystal_quest(self.quest_goal)
-
-                        self.combat_log.append("Quest accepted!")
-                        self.awaiting_quest_choice = False
-                        return
-
-                    elif event.key == pygame.K_n:
-                        self.combat_log.append("Quest refused.")
-
-                        if self.quest_giver:
-                            self.quest_giver.quest_refused = True
-                        self.awaiting_quest_choice = False
-                        self.quest_giver = None
-                        return
-                    
                 if event.key == pygame.K_e:
                     self._handle_interact()
                 elif event.key == pygame.K_i:
@@ -554,6 +584,7 @@ class Game:
                 elif event.key == pygame.K_ESCAPE:
                     self._open_pause()
                     return
+
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if self.inventory_button.collidepoint(event.pos):
                     self.state = GameState.INVENTORY
@@ -861,75 +892,47 @@ class Game:
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = pygame.mouse.get_pos()
-                
+
                 # Item selection (click on items)
-                for i, item in enumerate(self.player.inventory):
-                    item_rect = pygame.Rect(80, 90 + i * 60, 640, 50)
+                inv_box = pygame.Rect(380, 210, 470, 260)
+
+                visible_count = 5
+                start_index = max(0, self.selected_item_index - visible_count + 1)
+                visible_items = self.player.inventory[start_index:start_index + visible_count]
+
+                for visible_i, item in enumerate(visible_items):
+                    real_i = start_index + visible_i
+                    y = inv_box.y + 60 + visible_i * 36
+                    item_rect = pygame.Rect(inv_box.x + 10, y - 4, inv_box.width - 20, 32)
+
                     if item_rect.collidepoint(mouse_pos):
-                        self.selected_item_index = i
+                        self.selected_item_index = real_i
                         self.combat_log.append(f"Selected {item.name}")
-                
+
                 # Use/Equip button
                 if self.use_item_button.collidepoint(mouse_pos):
                     if self.selected_item_index < len(self.player.inventory):
-                        item = self.player.inventory[self.selected_item_index]
-                        
-                        if item.type == ItemType.HEALTH:
-                            # Use health potion
-                            self.player.heal(item.value)
-                            self.player.inventory.pop(self.selected_item_index)
-                            self.combat_log.append(f"Used {item.name}, healed {item.value} HP")
+                        self.use_selected_item()
 
-                            # Adjust selection if needed
-                            if self.selected_item_index >= len(self.player.inventory):
-                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
-
-                        elif item.type == ItemType.TORCH:
-                            self.player.light_torch(item)
-                            self.player.inventory.pop(self.selected_item_index)
-                            self.combat_log.append(f"Lit {item.name} ({int(item.duration)}s)")
-                            if self.selected_item_index >= len(self.player.inventory):
-                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
-
-                        elif item.type == ItemType.WEAPON:
-                            # Equip weapon
-                            self.player.equip_weapon(item)
-                            self.combat_log.append(f"Equipped {item.name}")
-                        
-                        elif item.type == ItemType.ARMOR:
-                            # Equip armor
-                            self.player.equip_armor(item)
-                            self.combat_log.append(f"Equipped {item.name}")
-                        elif item.type == ItemType.FOOD:
-                            # Consume food
-                            self.player.restore_hunger(item.value)
-                            self.player.inventory.pop(self.selected_item_index)
-                            self.combat_log.append(f"Used {item.name}, restored {item.value} hunger")
-                            if self.selected_item_index >= len(self.player.inventory):
-                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
-                        elif item.type == ItemType.SANITY:
-                            # Use sanity potion
-                            self.player.restore_sanity(item.value)
-                            self.player.inventory.pop(self.selected_item_index)
-                            self.combat_log.append(f"Used {item.name}, restored {item.value} sanity")
-                            if self.selected_item_index >= len(self.player.inventory):
-                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
                 # Drop button
                 elif self.drop_item_button.collidepoint(mouse_pos):
                     if self.selected_item_index < len(self.player.inventory):
                         dropped_item = self.player.inventory.pop(self.selected_item_index)
-                        if dropped_item == self.player.equipped_weapon:         
-                            self.player.equipped_weapon = None                  
-                            self.combat_log.append(f"Unequipped {dropped_item.name}")  
-                        elif dropped_item == self.player.equipped_armor:        
-                            self.player.equipped_armor = None                   
-                            self.combat_log.append(f"Unequipped {dropped_item.name}")  
+
+                        if dropped_item == self.player.equipped_weapon:
+                            self.player.equipped_weapon = None
+                            self.combat_log.append(f"Unequipped {dropped_item.name}")
+
+                        elif dropped_item == self.player.equipped_armor:
+                            self.player.equipped_armor = None
+                            self.combat_log.append(f"Unequipped {dropped_item.name}")
+
                         self.combat_log.append(f"Dropped {dropped_item.name}")
-                        
+
                         # Adjust selection if needed
                         if self.selected_item_index >= len(self.player.inventory):
                             self.selected_item_index = max(0, len(self.player.inventory) - 1)
-                
+
                 # Back button
                 elif self.back_button.collidepoint(mouse_pos):
                     # Return to previous state
@@ -937,51 +940,70 @@ class Game:
                         self.state = GameState.COMBAT
                     else:
                         self.state = GameState.EXPLORATION
+
                     self.combat_log.append("Closed inventory")
-            
+
             # Keyboard navigation
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:
+                if event.key in [pygame.K_UP, pygame.K_w]:
                     self.selected_item_index = max(0, self.selected_item_index - 1)
-                elif event.key == pygame.K_DOWN:
+
+                elif event.key in [pygame.K_DOWN, pygame.K_s]:
                     self.selected_item_index = min(len(self.player.inventory) - 1, self.selected_item_index + 1)
+
                 elif event.key == pygame.K_RETURN:
                     # Use selected item
                     if self.selected_item_index < len(self.player.inventory):
-                        item = self.player.inventory[self.selected_item_index]
-                        if item.type == ItemType.HEALTH:
-                            self.player.heal(item.value)
-                            self.player.inventory.pop(self.selected_item_index)
-                            self.combat_log.append(f"Used {item.name}, healed {item.value} HP")
-                            if self.selected_item_index >= len(self.player.inventory):
-                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
-                        elif item.type == ItemType.TORCH:
-                            self.player.light_torch(item)
-                            self.player.inventory.pop(self.selected_item_index)
-                            self.combat_log.append(f"Lit {item.name} ({int(item.duration)}s)")
-                            if self.selected_item_index >= len(self.player.inventory):
-                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
-                        elif item.type == ItemType.FOOD:
-                            # Consume food
-                            self.player.restore_hunger(item.value)
-                            self.player.inventory.pop(self.selected_item_index)
-                            self.combat_log.append(f"Used {item.name}, restored {item.value} hunger")
-                            if self.selected_item_index >= len(self.player.inventory):
-                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
-                        elif item.type == ItemType.SANITY:
-                            # Use sanity potion
-                            self.player.restore_sanity(item.value)
-                            self.player.inventory.pop(self.selected_item_index)
-                            self.combat_log.append(f"Used {item.name}, restored {item.value} sanity")
-                            if self.selected_item_index >= len(self.player.inventory):
-                                self.selected_item_index = max(0, len(self.player.inventory) - 1)
+                        self.use_selected_item()
+
                 elif event.key == pygame.K_ESCAPE:
                     # Back to previous state
                     if self.current_enemy:
                         self.state = GameState.COMBAT
                     else:
                         self.state = GameState.EXPLORATION
+
                     self.combat_log.append("Closed inventory")
+
+    def use_selected_item(self):
+        item = self.player.inventory[self.selected_item_index]
+
+        if item.type == ItemType.HEALTH:
+            # Use health potion
+            self.player.heal(item.value)
+            self.player.inventory.pop(self.selected_item_index)
+            self.combat_log.append(f"Used {item.name}, healed {item.value} HP")
+
+        elif item.type == ItemType.TORCH:
+            self.player.light_torch(item)
+            self.player.inventory.pop(self.selected_item_index)
+            self.combat_log.append(f"Lit {item.name} ({int(item.duration)}s)")
+
+        elif item.type == ItemType.WEAPON:
+            # Equip weapon
+            self.player.equip_weapon(item)
+            self.combat_log.append(f"Equipped {item.name}")
+
+        elif item.type == ItemType.ARMOR:
+            # Equip armor
+            self.player.equip_armor(item)
+            self.combat_log.append(f"Equipped {item.name}")
+
+        elif item.type == ItemType.FOOD:
+            # Consume food
+            self.player.restore_hunger(item.value)
+            self.player.inventory.pop(self.selected_item_index)
+            self.combat_log.append(f"Used {item.name}, restored {item.value} hunger")
+
+        elif item.type == ItemType.SANITY:
+            # Use sanity potion
+            self.player.restore_sanity(item.value)
+            self.player.inventory.pop(self.selected_item_index)
+            self.combat_log.append(f"Used {item.name}, restored {item.value} sanity")
+
+        # Adjust selection if needed
+        if self.selected_item_index >= len(self.player.inventory):
+            self.selected_item_index = max(0, len(self.player.inventory) - 1)
   
 
     def run(self):
@@ -1048,7 +1070,7 @@ class Game:
                 self.player.update_sanity(dt)
 
                 if self.quest_active and self.quest_type == "collect":
-                    if self.player.crystal_bag >= self.quest_goaland and not self.quest_completed:
+                    if self.player.crystal_bag >= self.quest_goal and not self.quest_completed:
                         self.quest_completed = True
                         self.combat_log.append("Quest completed! Return to the quest giver.")
                 
@@ -1057,6 +1079,11 @@ class Game:
 
                 # Update enemies
                 self._update_enemies(dt)
+
+                #Update NPCs
+                for npc in self.npcs:
+                    if npc != self.dialogue_npc:
+                        npc.update(dt, self.dungeon)
 
                 # Update animated tiles
                 self.dungeon.update(dt)
@@ -1118,14 +1145,24 @@ class Game:
                 elif event.key == pygame.K_ESCAPE:
                     self.state = GameState.EXPLORATION
                     self.combat_log.append("Left shop")
+            
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = pygame.mouse.get_pos()
-                # Select item
-                for i, item in enumerate(self.shop_items):
-                    item_rect = pygame.Rect(150, 120 + i * 70, 600, 55)
-                    if item_rect.collidepoint(mouse_pos):
-                        self.selected_shop_index = i
 
+                # Select item (NEW - supports scrolling / no overlap)
+                shop_box = pygame.Rect(380, 210, 470, 260)
+
+                visible_count = 5
+                start_index = max(0, self.selected_shop_index - visible_count + 1)
+                visible_items = self.shop_items[start_index:start_index + visible_count]
+
+                for visible_i, item in enumerate(visible_items):
+                    real_i = start_index + visible_i
+                    y = shop_box.y + 60 + visible_i * 36
+                    item_rect = pygame.Rect(shop_box.x + 10, y - 4, shop_box.width - 20, 32)
+
+                    if item_rect.collidepoint(mouse_pos):
+                        self.selected_shop_index = real_i
                 # BUY BUTTON
                 if self.shop_buy_button.collidepoint(mouse_pos):
                     self.buy_shop_item()
@@ -1174,7 +1211,7 @@ class Game:
             ("Guide", ["Stay close to the light.", "Doors may hide danger."], "guide"),
         ]
 
-        #npc_count = min(len(safe_rooms), random.randint(4, 7)) #NPC AMOUNT
+    
         
         possible_rooms = self.dungeon.rooms[1:]
 
@@ -1190,7 +1227,7 @@ class Game:
 
             if not has_enemy:
                 safe_rooms.append(room)
-        npc_count = min(len(safe_rooms), random.randint(4, 7)) #NPC AMOUNT
+        npc_count = min(len(safe_rooms), random.randint(10, 16)) #NPC AMOUNT
         random.shuffle(safe_rooms)
         rooms_to_use = safe_rooms[:npc_count]
 
@@ -1207,24 +1244,27 @@ class Game:
                 tile_x = random.randint(rx, rx + rw - 1)
                 tile_y = random.randint(ry, ry + rh - 1)
 
-                if self.dungeon.tiles[tile_y][tile_x] != TILE_FLOOR:
+                # if self.dungeon.tiles[tile_y][tile_x] != TILE_FLOOR:
+                #     continue
+                temp_npc = NPC(tile_x, tile_y, "temp", [], "guide")
+                if not temp_npc.can_stand_on_tile(self.dungeon, tile_x, tile_y):
                     continue
 
-                bad_nearby = False
-                for dy in range(-1, 2):
-                    for dx in range(-1, 2):
-                        nx = tile_x + dx
-                        ny = tile_y + dy
-                        if 0 <= nx < MAP_COLS and 0 <= ny < MAP_ROWS:
-                            if self.dungeon.tiles[ny][nx] in [
-                                TILE_DOOR,
-                                TILE_CHEST,
-                                TILE_STAIR,
-                            ]:
-                                bad_nearby = True
+                # bad_nearby = False
+                # for dy in range(-1, 2):
+                #     for dx in range(-1, 2):
+                #         nx = tile_x + dx
+                #         ny = tile_y + dy
+                #         if 0 <= nx < MAP_COLS and 0 <= ny < MAP_ROWS:
+                #             if self.dungeon.tiles[ny][nx] in [
+                #                 TILE_DOOR,
+                #                 TILE_CHEST,
+                #                 TILE_STAIR,
+                #             ]:
+                #                 bad_nearby = True
 
-                if bad_nearby:
-                    continue
+                # if bad_nearby:
+                #     continue
 
                 name, lines, role = role_choice
                 self.npcs.append(NPC(tile_x, tile_y, name, lines, role))

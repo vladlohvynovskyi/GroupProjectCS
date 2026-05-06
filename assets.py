@@ -96,29 +96,45 @@ class Assets:
         self.ui_slider_track = load_ui("PanelSettings_Slider.png")
         self.ui_slider_knob  = load_ui("PanelSettings_Slider_B.png")
 
-        # Healer NPC
-        healer_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "monk.png")
-        healer_sheet = pygame.image.load(healer_path).convert_alpha()
-        healer_frame = healer_sheet.subsurface((0, 0, 32, 32))
-        self.npc_healer = pygame.transform.scale(healer_frame, (TILE_SIZE, TILE_SIZE))
+       # Healer NPC 
+        self.npc_healer_idle = [
+        load_sprite(f"wizzard_m_idle_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
+        for i in range(4)
+    ]
+        
+        self.npc_healer_run = [
+            load_sprite(f"wizzard_m_run_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
+            for i in range(4)
+    ]
 
-        # Merchant NPC
-        merchant_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "Male1.png")
-        merchant_sheet = pygame.image.load(merchant_path).convert_alpha()
-        merchant_frame = merchant_sheet.subsurface((0, 0, 32, 32))
-        self.npc_merchant = pygame.transform.scale(merchant_frame, (TILE_SIZE, TILE_SIZE))
+        # Merchant NPC 
+        self.npc_merchant_idle = [
+            load_sprite(f"elf_m_idle_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
+            for i in range(4)
+        ]
+
+        self.npc_merchant_run = [
+            load_sprite(f"elf_m_run_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
+            for i in range(4)
+        ]
 
         # Guide NPC
-        guide_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "Male2.png")
-        guide_sheet = pygame.image.load(guide_path).convert_alpha()
-        guide_frame = guide_sheet.subsurface((0, 0, 32, 32))
-        self.npc_guide = pygame.transform.scale(guide_frame, (TILE_SIZE, TILE_SIZE))
+        self.npc_guide_idle = [
+            load_sprite(f"dwarf_m_idle_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
+            for i in range(4)
+        ]
 
-        # Quest NPC
-        quest_path = os.path.join(SCRIPT_DIR, "assets", "images", "npcs", "Necromancer_creativekind-Sheet.png")
-        quest_sheet = pygame.image.load(quest_path).convert_alpha()
-        quest_frame = quest_sheet.subsurface((0, 0, 128, 128))
-        self.npc_quest = pygame.transform.scale(quest_frame, (TILE_SIZE, TILE_SIZE))
+        self.npc_guide_run = [
+            load_sprite(f"dwarf_m_run_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
+            for i in range(4)
+        ]
+        # Quest giver NPC 
+        self.npc_quest_idle = [
+            load_sprite(f"doc_idle_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
+            for i in range(4)
+        ]
 
-        # Dark tint
-        self.npc_merchant.fill((180, 180, 180), special_flags=pygame.BLEND_RGB_MULT)
+        self.npc_quest_run = [
+            load_sprite(f"doc_run_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
+            for i in range(4)
+        ]

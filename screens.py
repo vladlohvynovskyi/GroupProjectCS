@@ -174,6 +174,8 @@ def draw_exploration(game):
     # Draw controls hint
     draw_text(game, "WASD: Move | E: Interact | I: Inventory",
               200, SCREEN_HEIGHT - 25, WHITE, game.small_font)
+    
+    draw_npc_dialogue(game)
 
 
 def draw_combat(game):
@@ -456,65 +458,109 @@ def _draw_placeholder_enemy(game, enemy_rect, enemy, glow_color):
     pygame.draw.rect(game.screen, COLOR_BLACK, mouth_rect)
 
 def draw_inventory(game):
-    game.screen.fill((24, 21, 35))
-    draw_text(game, "INVENTORY", 350, 20, YELLOW)
-    draw_text(game,
+    game.screen.fill(COLOR_BLACK)
+
+    overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 170))
+    game.screen.blit(overlay, (0, 0))
+
+    panel_rect = pygame.Rect(50, 90, 860, 540)
+
+    if game.assets.combat_bg:
+        bg = pygame.transform.scale(game.assets.combat_bg, panel_rect.size)
+        game.screen.blit(bg, panel_rect.topleft)
+    else:
+        pygame.draw.rect(game.screen, DARK_GRAY, panel_rect)
+
+    pygame.draw.rect(game.screen, LIGHT_GRAY, panel_rect, 3)
+
+    title = game.title_font.render("INVENTORY", True, YELLOW)
+    game.screen.blit(title, title.get_rect(center=(panel_rect.centerx, panel_rect.y + 55)))
+
+    # Player sprite
+    frames = game.assets.player_idle
+    frame = frames[game.player.anim_frame]
+    if game.player.facing_left:
+        frame = pygame.transform.flip(frame, True, False)
+
+    player_big = pygame.transform.scale(frame, (240, 240))
+    game.screen.blit(player_big, (panel_rect.x + 55, panel_rect.y + 145))
+
+    # Inventory list box
+    inv_box = pygame.Rect(panel_rect.x + 330, panel_rect.y + 120, 470, 260)
+    pygame.draw.rect(game.screen, (20, 18, 25), inv_box)
+    pygame.draw.rect(game.screen, LIGHT_GRAY, inv_box, 2)
+
+    draw_text(
+        game,
         f"Slots: {len(game.player.inventory)}/{game.player.max_inventory}",
-        350, 60)
+        inv_box.x + 20,
+        inv_box.y + 15,
+        WHITE,
+        game.medium_font
+    )
+
+    visible_count = 5
+    start_index = max(0, game.selected_item_index - visible_count + 1)
+    visible_items = game.player.inventory[start_index:start_index + visible_count]
 
     if not game.player.inventory:
-        draw_text(game, "Inventory empty", 300, 200, GRAY)
+        draw_text(game, "Inventory empty", inv_box.x + 25, inv_box.y + 70, GRAY, game.medium_font)
     else:
-        for i, item in enumerate(game.player.inventory):
-            if i == game.selected_item_index:
-                pygame.draw.rect(game.screen, (70, 70, 70),
-                                 (80, 90 + i * 60, 640, 50))
-            
-            # Item name and type
-            item_text = f"{item.name}"
+        for visible_i, item in enumerate(visible_items):
+            real_i = start_index + visible_i
+            y = inv_box.y + 60 + visible_i * 36
+
+            if real_i == game.selected_item_index:
+                pygame.draw.rect(game.screen, (70, 70, 70), (inv_box.x + 10, y - 4, inv_box.width - 20, 32))
+
+            item_text = item.name
+
             if item.type == ItemType.WEAPON:
-                item_text += f" (DMG: {item.damage}, {item.element.name})"
+                item_text += f" (DMG {item.damage}, {item.element.name})"
             elif item.type == ItemType.HEALTH:
-                item_text += f" (Heal: {item.value})"
+                item_text += f" (Heal {item.value})"
             elif item.type == ItemType.ARMOR:
-                item_text += f" (DEF: {item.defense})"
+                item_text += f" (DEF {item.defense})"
             elif item.type == ItemType.TORCH:
-                item_text += f" (Light: {int(item.duration)}s)"
+                item_text += f" (Light {int(item.duration)}s)"
             elif item.type == ItemType.FOOD:
-                item_text += f" (Hunger: {item.value})"
+                item_text += f" (Hunger {item.value})"
             elif item.type == ItemType.SANITY:
-                item_text += f" (Sanity: {item.value})"
-            
-            # Truncate if too long
-            if len(item_text) > 40:
-                item_text = item_text[:37] + "..."
-            
-            color = YELLOW if i == game.selected_item_index else WHITE
-            draw_text(game, item_text, 100, 100 + i * 60, color, game.small_font)
-            
-            # Draw equipped indicator
+                item_text += f" (Sanity {item.value})"
+
+            if len(item_text) > 38:
+                item_text = item_text[:35] + "..."
+
+            color = YELLOW if real_i == game.selected_item_index else WHITE
+            draw_text(game, item_text, inv_box.x + 25, y, color, game.small_font)
+
             if item == game.player.equipped_weapon:
-                draw_text(game, "[EQUIPPED WEAPON]", 550, 100 + i * 60,
-                          GREEN, game.small_font)
+                draw_text(game, "E", inv_box.right - 35, y, GREEN, game.small_font)
             elif item == game.player.equipped_armor:
-                draw_text(game, "[EQUIPPED ARMOR]", 550, 100 + i * 60,
-                          BLUE, game.small_font)
+                draw_text(game, "E", inv_box.right - 35, y, BLUE, game.small_font)
 
-    # draw_ui_button_simple(game, game.use_item_button, "Use/Equip", False)
-    # draw_ui_button_simple(game, game.drop_item_button, "Drop", False)
-    # draw_ui_button_simple(game, game.back_button, "Back", False)
-    mouse_pos = pygame.mouse.get_pos()
+    # Buttons
+    game.use_item_button = pygame.Rect(panel_rect.x + 330, panel_rect.y + 405, 160, 50)
+    game.drop_item_button = pygame.Rect(panel_rect.x + 510, panel_rect.y + 405, 160, 50)
+    game.back_button = pygame.Rect(panel_rect.x + 690, panel_rect.y + 405, 160, 50)
 
-    draw_ui_button(game, game.use_item_button, "Use/Equip", "title", 4, 0, game.use_item_button.collidepoint(mouse_pos))
-    draw_ui_button(game, game.drop_item_button, "Drop", "title", 2, 0, game.drop_item_button.collidepoint(mouse_pos))
-    draw_ui_button(game, game.back_button, "Back", "title", 0, 0, game.back_button.collidepoint(mouse_pos))
+    draw_button(game, game.use_item_button, "Use/Equip")
+    draw_button(game, game.drop_item_button, "Drop")
+    draw_button(game, game.back_button, "Back")
+
+    draw_text(
+        game,
+        "W/S or UP/DOWN: Select | ENTER: Use | ESC: Back",
+        panel_rect.x + 250,
+        panel_rect.y + panel_rect.height - 45,
+        WHITE,
+        game.small_font
+    )
 
     if game.player.keys:
-        # draw_text(game, f"Keys: {', '.join(sorted(game.player.keys))}",
-        #           100, 565, YELLOW, game.small_font)
         keys_text = f"Keys: {', '.join(sorted(game.player.keys))}"
-        draw_text(game, keys_text[:55], 100, 565, YELLOW, game.small_font)
-
+        draw_text(game, keys_text[:55], panel_rect.x + 330, panel_rect.y + 470, YELLOW, game.small_font)
 def draw_game_over(game):
     """Draw game over screen"""
     game.screen.fill((24, 21, 35))
@@ -538,25 +584,132 @@ def draw_victory(game):
               200, 450, WHITE, game.small_font)
 
 def draw_shop(game):
-    game.screen.fill(DARK_GRAY)
+    game.screen.fill(COLOR_BLACK)
 
-    draw_text(game, "MERCHANT SHOP", 330, 30, YELLOW)
-    draw_text(game, f"Your XP: {game.player.xp}", 350, 75, WHITE)
-    for i, item in enumerate(game.shop_items):
+    overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 170))
+    game.screen.blit(overlay, (0, 0))
 
-        y = 130 + i * 70
-        if i == game.selected_shop_index:
-            pygame.draw.rect(game.screen, (70, 70, 70), (150, y - 10, 600, 55))
+    # Bigger shop window
+    panel_rect = pygame.Rect(50, 90, 860, 540)
 
-        color = YELLOW if i == game.selected_shop_index else WHITE
-        draw_text(game, item.name, 180, y, color)
-        draw_text(game, f"{game.shop_prices[i]} XP", 600, y, GREEN)
-       
+    if game.assets.combat_bg:
+        bg = pygame.transform.scale(game.assets.combat_bg, panel_rect.size)
+        game.screen.blit(bg, panel_rect.topleft)
+    else:
+        pygame.draw.rect(game.screen, DARK_GRAY, panel_rect)
+
+    pygame.draw.rect(game.screen, LIGHT_GRAY, panel_rect, 3)
+
+    title = game.title_font.render("MERCHANT SHOP", True, YELLOW)
+    game.screen.blit(title, title.get_rect(center=(panel_rect.centerx, panel_rect.y + 55)))
+
+    # Merchant sprite
+    frames = game.assets.npc_merchant_idle
+    frame = frames[game.shop_npc.anim_frame] if game.shop_npc else frames[0]
+    merchant_big = pygame.transform.scale(frame, (240, 240))
+    game.screen.blit(merchant_big, (panel_rect.x + 55, panel_rect.y + 145))
+
+    # Shop list box
+    shop_box = pygame.Rect(panel_rect.x + 330, panel_rect.y + 120, 470, 260)
+    pygame.draw.rect(game.screen, (20, 18, 25), shop_box)
+    pygame.draw.rect(game.screen, LIGHT_GRAY, shop_box, 2)
+
+    draw_text(game, f"Your XP: {game.player.xp}", shop_box.x + 20, shop_box.y + 15, WHITE, game.medium_font)
+
+    # Show max 5 items so it cannot overlap
+    visible_count = 5
+    start_index = max(0, game.selected_shop_index - visible_count + 1)
+    visible_items = game.shop_items[start_index:start_index + visible_count]
+
+    for visible_i, item in enumerate(visible_items):
+        real_i = start_index + visible_i
+        y = shop_box.y + 60 + visible_i * 36
+
+        if real_i == game.selected_shop_index:
+            pygame.draw.rect(game.screen, (70, 70, 70), (shop_box.x + 10, y - 4, shop_box.width - 20, 32))
+
+        color = YELLOW if real_i == game.selected_shop_index else WHITE
+        draw_text(game, item.name, shop_box.x + 25, y, color, game.small_font)
+        draw_text(game, f"{game.shop_prices[real_i]} XP", shop_box.x + 335, y, GREEN, game.small_font)
+
+    # Buttons
+    game.shop_buy_button = pygame.Rect(panel_rect.x + 370, panel_rect.y + 405, 170, 50)
+    game.shop_back_button = pygame.Rect(panel_rect.x + 570, panel_rect.y + 405, 170, 50)
+
     draw_button(game, game.shop_buy_button, "Buy")
     draw_button(game, game.shop_back_button, "Back")
-    draw_text(game, "W/S or UP/DOWN: Select | ENTER: Buy | ESC: Back",
-              220, 560, WHITE, game.small_font)
-    
-    # Warnings
-    for i, msg in enumerate(game.combat_log[-3:]):
-        draw_text(game, msg, 260, 610 + i * 22, WHITE, game.small_font)
+
+    # Controls text at bottom of window
+    draw_text(
+        game,
+        "W/S or UP/DOWN: Select | ENTER: Buy | ESC: Back",
+        panel_rect.x + 250,
+        panel_rect.y + panel_rect.height - 45,
+        WHITE,
+        game.small_font
+    )
+def draw_npc_dialogue(game):
+    if game.dialogue_npc is None:
+        return
+
+    overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 170))
+    game.screen.blit(overlay, (0, 0))
+
+    panel_rect = pygame.Rect(80, 130, 800, 420)
+
+    if game.assets.combat_bg:
+        bg = pygame.transform.scale(game.assets.combat_bg, panel_rect.size)
+        game.screen.blit(bg, panel_rect.topleft)
+    else:
+        pygame.draw.rect(game.screen, DARK_GRAY, panel_rect)
+
+    pygame.draw.rect(game.screen, LIGHT_GRAY, panel_rect, 3)
+
+    npc = game.dialogue_npc
+    title_text = npc.name.upper()
+    title = game.title_font.render(title_text, True, YELLOW)
+    game.screen.blit(title, (panel_rect.x + 310, panel_rect.y + 25))
+
+    if npc.role == "guide":
+        frames = game.assets.npc_guide_idle
+    elif npc.role == "healer":
+        frames = game.assets.npc_healer_idle
+    elif npc.role == "quest":
+        frames = game.assets.npc_quest_idle
+    else:
+        frames = game.assets.npc_guide_idle
+
+    frame = frames[npc.anim_frame]
+    npc_big = pygame.transform.scale(frame, (220, 220))
+    game.screen.blit(npc_big, (panel_rect.x + 45, panel_rect.y + 105))
+
+    text_box = pygame.Rect(panel_rect.x + 290, panel_rect.y + 125, 450, 160)
+    pygame.draw.rect(game.screen, (20, 18, 25), text_box)
+    pygame.draw.rect(game.screen, LIGHT_GRAY, text_box, 2)
+
+    words = game.dialogue_text.split()
+    line = ""
+    y = text_box.y + 25
+
+    for word in words:
+        test_line = line + word + " "
+        if game.medium_font.size(test_line)[0] > text_box.width - 40:
+            draw_text(game, line, text_box.x + 20, y, WHITE, game.medium_font)
+            line = word + " "
+            y += 32
+        else:
+            line = test_line
+
+    if line:
+        draw_text(game, line, text_box.x + 20, y, WHITE, game.medium_font)
+
+    button_count = len(game.dialogue_buttons)
+    total_width = button_count * 180 + max(0, button_count - 1) * 25
+    start_x = panel_rect.centerx - total_width // 2
+    button_y = panel_rect.y + 330
+
+    for i, button in enumerate(game.dialogue_buttons):
+        button["rect"] = pygame.Rect(start_x + i * 205, button_y, 180, 50)
+        draw_button(game, button["rect"], button["text"])
