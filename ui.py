@@ -10,6 +10,11 @@ def draw_text(game, text, x, y, color=WHITE, font_obj=None):
 
 
 def draw_button(game, rect, text, color=LIGHT_GRAY, text_color=WHITE):
+    button_color = (70, 50, 100)  # deep purple
+    hover_color = (100, 70, 140)
+
+    mouse_pos = pygame.mouse.get_pos()
+    color = hover_color if rect.collidepoint(mouse_pos) else button_color
     pygame.draw.rect(game.screen, color, rect)
     pygame.draw.rect(game.screen, COLOR_BLACK, rect, 2)
     text_surf = game.small_font.render(text, True, text_color)

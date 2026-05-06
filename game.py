@@ -297,6 +297,7 @@ class Game:
 
                 if isinstance(found, str) and found.startswith("key_"):
                     player.keys.add(found)
+                    self.combat_log.append(f"Found {found}!")
                     print(f"Picked up {found}. Keys: {sorted(player.keys)}")
                 elif found == "smth":
                     potion = HealthPotion("Health Potion", 30)
