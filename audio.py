@@ -11,6 +11,27 @@ class AudioManager:
         self.music_volume = 0.2
         self.sfx_volume = 0.2
         self._load_sounds()
+
+        #Sanity
+        self.sanity_channel = pygame.mixer.Channel(5)
+        self.ghost_channel = pygame.mixer.Channel(6)
+        self.sanity_combat_channel = pygame.mixer.Channel(7)
+        self.sanity_whisper = pygame.mixer.Sound(
+            os.path.join("assets", "sounds", "Crying_moaning_ambience_3.wav")
+        )
+
+        self.ghost_chior = pygame.mixer.Sound(
+            os.path.join("assets", "sounds", "Ghost chior.wav")
+        )
+
+        self.sanity_combat = pygame.mixer.Sound(
+            os.path.join("assets", "sounds", "Monster_grunt_long.wav")
+        )
+
+        self.sanity_whisper.set_volume(0.8)
+        self.ghost_chior.set_volume(0.7)
+
+        self.sanity_combat.set_volume(0.8)
     
     def _load_sounds(self):
         """Load sound effects"""
@@ -68,7 +89,11 @@ class AudioManager:
                 print(f"Could not load sound: {filename} - {e}")
     
     def play_exploration_music(self):
+
+        
         """Start or resume exploration background music from where it left off"""
+        self.sanity_combat_channel.stop()
+        
         try:
             if self.current_music == "combat":
                 # Coming back from combat, resume from stored position
@@ -88,17 +113,30 @@ class AudioManager:
         except Exception as e:
             print(f"Could not load exploration music: {e}")
     
-    def play_combat_music(self):
+    def play_combat_music(self, sanity=None):
         """Switch to combat music and save exploration position"""
         try:
             # Save current exploration music position before switching
             if self.current_music == "exploring" and pygame.mixer.music.get_busy():
                 self.music_position = pygame.mixer.music.get_pos() / 1000.0  # Convert ms to seconds
             
-            pygame.mixer.music.load("assets/music/fight.wav")
-            pygame.mixer.music.play(-1)
-            pygame.mixer.music.set_volume(self.music_volume)
-            self.current_music = "combat"
+            if sanity is not None and sanity < 35:
+                pygame.mixer.music.stop()
+                if not self.sanity_combat_channel.get_busy():
+                    self.sanity_combat_channel.play(self.sanity_combat, loops=-1)
+                self.sanity_combat_channel.set_volume(0.8)
+                self.current_music = "sanity_combat"
+            else:
+                self.sanity_combat_channel.stop()
+                pygame.mixer.music.load("assets/music/fight.wav")
+                pygame.mixer.music.play(-1)
+                pygame.mixer.music.set_volume(self.music_volume)
+                self.current_music = "combat"
+
+            # pygame.mixer.music.load("assets/music/fight.wav")
+            # pygame.mixer.music.play(-1)
+            # pygame.mixer.music.set_volume(self.music_volume)
+            # self.current_music = "combat"
         except Exception as e:
             print(f"Could not load combat music: {e}")
 
@@ -178,3 +216,30 @@ class AudioManager:
           self.sounds["armored_golem_death"].play()
       elif "death" in self.sounds:
           self.sounds["death"].play()  # Default death sound
+
+    def update_sanity_audio(self, sanity):
+        if sanity <= 20:
+            music_volume = 0.0
+        elif sanity <= 30:
+            music_volume = self.music_volume * 0.1
+        elif sanity <= 40:
+            music_volume = self.music_volume * 0.5
+        else:
+
+
+            music_volume = self.music_volume
+        pygame.mixer.music.set_volume(music_volume)
+
+        if sanity <= 35:
+            if not self.sanity_channel.get_busy():
+                self.sanity_channel.play(self.sanity_whisper, loops=-1)
+            self.sanity_channel.set_volume(0.8)
+        else:
+            self.sanity_channel.stop()
+        if sanity <= 20:
+            if not self.ghost_channel.get_busy():
+                self.ghost_channel.play(self.ghost_chior, loops=-1)
+         
+            self.ghost_channel.set_volume(0.7)
+        else:
+            self.ghost_channel.stop()

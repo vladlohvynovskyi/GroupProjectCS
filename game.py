@@ -99,7 +99,7 @@ class Game:
         #Shop Buttons
         self.shop_buy_button = pygame.Rect(250, 500, 160, 45)
         self.shop_back_button = pygame.Rect(500, 500, 160, 45)
-        
+        self.shop_message = ""
 
         #Hallucination
         self.hallucination_timer =0.0
@@ -142,6 +142,7 @@ class Game:
         spawn_x = float(first_room[0] * TILE_SIZE + first_room[2] * TILE_SIZE / 2)
         spawn_y = float(first_room[1] * TILE_SIZE + first_room[3] * TILE_SIZE / 2)
         self.player = Player(spawn_x, spawn_y)
+        #self.player.sanity = 35 #TEST
         self.update_fog()
 
         self.current_enemy = None
@@ -179,6 +180,7 @@ class Game:
         self.shop_buy_button = pygame.Rect(250, 500, 160, 45)
         self.shop_back_button = pygame.Rect(500, 500, 160, 45)
         self.shop_npc = None
+        self.shop_message = ""
 
         self.quest_active = False
         self.quest_completed = False
@@ -390,7 +392,8 @@ class Game:
 
                 self.audio.play_transition_sound()
                 pygame.time.wait(300)
-                self.audio.play_combat_music()
+                #self.audio.play_combat_music()
+                self.audio.play_combat_music(self.player.sanity)
                 break
 
     def _check_campfire_proximity(self):
@@ -1069,6 +1072,8 @@ class Game:
                 self.player.update_survival_hunger(dt)
                 self.player.update_sanity(dt)
 
+                self.audio.update_sanity_audio(self.player.sanity)
+
                 if self.quest_active and self.quest_type == "collect":
                     if self.player.crystal_bag >= self.quest_goal and not self.quest_completed:
                         self.quest_completed = True
@@ -1144,6 +1149,7 @@ class Game:
                     self.buy_shop_item()
                 elif event.key == pygame.K_ESCAPE:
                     self.state = GameState.EXPLORATION
+                    self.shop_message = "" 
                     self.combat_log.append("Left shop")
             
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -1170,6 +1176,7 @@ class Game:
                 # BACK BUTTON
                 elif self.shop_back_button.collidepoint(mouse_pos):
                     self.state = GameState.EXPLORATION
+                    self.shop_message = "" 
                     self.combat_log.append("Left shop")
 
 
@@ -1181,14 +1188,18 @@ class Game:
         cost = self.shop_prices[self.selected_shop_index]
         if self.player.xp < cost:
 
-            self.combat_log.append(f"Not enough XP! Need {cost} XP.")
+            #self.combat_log.append(f"Not enough XP! Need {cost} XP.")
+            self.shop_message = f"Not enough XP! Need {cost} XP."
             return
 
         if not self.player.add_item(item):
-            self.combat_log.append("Inventory full! Cannot buy item.")
+            #self.combat_log.append("Inventory full! Cannot buy item.")
+            self.shop_message = "Inventory full! Cannot buy item."
             return
+        self.shop_message = ""
         self.player.xp -= cost
         self.combat_log.append(f"Bought {item.name} for {cost} XP.")
+        #self.shop_message = f"Bought {item.name} for {cost} XP."
 
         # Remove bought item from this merchant forever
         self.shop_items.pop(self.selected_shop_index)
@@ -1227,7 +1238,7 @@ class Game:
 
             if not has_enemy:
                 safe_rooms.append(room)
-        npc_count = min(len(safe_rooms), random.randint(10, 16)) #NPC AMOUNT
+        npc_count = min(len(safe_rooms), random.randint(8, 13)) #NPC AMOUNT
         random.shuffle(safe_rooms)
         rooms_to_use = safe_rooms[:npc_count]
 
