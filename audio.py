@@ -175,6 +175,8 @@ class AudioManager:
             sound.set_volume(self.sfx_volume)
         for sound in self.hurt_sounds:
             sound.set_volume(self.sfx_volume)
+        for sound in self.door_sounds:
+            sound.set_volume(self.sfx_volume)
 
     def play_hurt_sound(self):
       """Play a random hurt sound"""
