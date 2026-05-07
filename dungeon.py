@@ -409,6 +409,13 @@ class DungeonMap:
             return "opened"
         return None
 
+    def peek_chest(self, x, y):
+        """Return the contents of an unopened chest at (x, y)"""
+        for chest in self.chests:
+            if chest["x"] == x and chest["y"] == y and not chest["opened"]:
+                return chest["contents"]
+        return None
+
     def open_chest(self, x, y):
         """Open the chest at (x, y). Returns its contents, or None if no unopened chest."""
         for chest in self.chests:

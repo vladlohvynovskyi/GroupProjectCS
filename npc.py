@@ -122,24 +122,24 @@ class NPC:
                     Armor("Leather Armor", 5, "Quest reward armor"),
                 ])
 
-                game.player.xp += self.quest_reward_xp
-
+                # Only finish the quest if the player can take the reward.
                 if game.player.add_item(reward):
+                    game.player.xp += self.quest_reward_xp
                     game.dialogue_text = f"Well done. Here is your reward: {reward.name}, and {self.quest_reward_xp} XP."
+
+                    self.quest_finished = True
+                    game.quest_active = False
+                    game.quest_completed = False
+                    game.quest_kills = 0
+                    game.quest_goal = 0
+                    game.quest_type = None
+                    game.quest_giver = None
+                    game.player.crystal_bag = 0
+                    game.player.crystal_bag_max = 0
+
+                    game.remove_npc(self)
                 else:
-                    game.dialogue_text = f"Well done. You gained {self.quest_reward_xp} XP, but your inventory is full."
-
-                self.quest_finished = True
-                game.quest_active = False
-                game.quest_completed = False
-                game.quest_kills = 0
-                game.quest_goal = 0
-                game.quest_type = None
-                game.quest_giver = None
-                game.player.crystal_bag = 0
-                game.player.crystal_bag_max = 0
-
-                game.remove_npc(self)
+                    game.dialogue_text = "Your inventory is full. Make some space and come back to me for your reward."
 
                 game.dialogue_buttons = [
                     {"text": "Finish Dialogue", "action": "finish", "rect": pygame.Rect(0, 0, 240, 50)}

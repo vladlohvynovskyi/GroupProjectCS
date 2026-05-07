@@ -297,66 +297,73 @@ class Game:
                 break
 
             elif tile == TILE_CHEST:
-                found = dungeon.open_chest(check_x, check_y)
+                found = dungeon.peek_chest(check_x, check_y)
                 if found is None:
                     break
                 print(f"Found: {found}")
 
-                self.audio.play_chest_sound()
-
+                granted = False
                 if isinstance(found, str) and found.startswith("key_"):
                     player.keys.add(found)
                     self.combat_log.append(f"Found {found}!")
                     print(f"Picked up {found}. Keys: {sorted(player.keys)}")
+                    granted = True
                 elif found == "smth":
                     potion = HealthPotion("Health Potion", 30)
                     if player.add_item(potion):
                         self.combat_log.append("Found Health Potion!")
+                        granted = True
                     else:
-                        self.combat_log.append("Inventory full!")
+                        self.combat_log.append("Inventory full! Come back when you have space.")
                 elif found == "torch":
                     torch = Torch()
                     if player.add_item(torch):
                         self.combat_log.append("Found Torch!")
+                        granted = True
                     else:
-                        self.combat_log.append("Inventory full!")
+                        self.combat_log.append("Inventory full! Come back when you have space.")
                 elif found == "food":
                     food = Food("Bread", random.randint(15, 35))
                     if player.add_item(food):
                         self.combat_log.append(f"Found Bread! Restores {food.value} hunger.")
+                        granted = True
                     else:
-                        self.combat_log.append("Inventory full!")
-
+                        self.combat_log.append("Inventory full! Come back when you have space.")
                 elif found == "sanity":
                     sanity_potion = SanityPotion("Sanity Potion", random.randint(25, 40))
                     if player.add_item(sanity_potion):
                         self.combat_log.append(f"Found Sanity Potion! Restores {sanity_potion.value} sanity.")
+                        granted = True
                     else:
-                        self.combat_log.append("Inventory full!")
-                
+                        self.combat_log.append("Inventory full! Come back when you have space.")
                 elif found == "crystals":
                     if self.quest_type == "collect":
                         if self.player.crystal_bag < self.player.crystal_bag_max:
                             self.player.crystal_bag += 1
                             self.combat_log.append(f"Collected crystal ({self.player.crystal_bag}/{self.player.crystal_bag_max})")
+                            granted = True
                         else:
                             self.combat_log.append("Crystal bag is full!")
                     else:
-                        self.combat_log.append("You found crystals, but you have no crystal quest.")
-                        break
-                
+                        self.combat_log.append("You found crystals, but you have no crystal quest. Come back later.")
                 elif found == "iron_plate":
                     item = IronPlate()
                     if player.add_item(item):
                         self.combat_log.append(f"Found {item.name}! (+{item.defense} defense)")
+                        granted = True
                     else:
-                        self.combat_log.append("Inventory full!")
+                        self.combat_log.append("Inventory full! Come back when you have space.")
                 elif found == "stone_breaker":
                     item = StoneBreaker()
                     if player.add_item(item):
                         self.combat_log.append(f"Found {item.name}! (DMG: {item.damage}, {item.element.name})")
+                        granted = True
                     else:
-                        self.combat_log.append("Inventory full!")
+                        self.combat_log.append("Inventory full! Come back when you have space.")
+
+                if granted:
+                    dungeon.open_chest(check_x, check_y)
+                    self.audio.play_chest_sound()
     def _check_traps(self):
         player = self.player
         damage = self.dungeon.trigger_trap(player.tile_x(), player.tile_y())
@@ -926,6 +933,8 @@ class Game:
                     self.status_popup_timer = 60
                     self.status_popup_text = f"Got {item.name}!"
                     self.status_popup_color = (100, 255, 100)
+                else:
+                    self.combat_log.append(f"Inventory full! Lost {item.name} from the destroyed arm.")
 
         # Bee Scared - Flame Blade from legs
         elif enemy.name == "Bee Scared":
@@ -936,6 +945,8 @@ class Game:
                     self.status_popup_timer = 60
                     self.status_popup_text = f"Got {item.name}!"
                     self.status_popup_color = (100, 255, 100)
+                else:
+                    self.combat_log.append(f"Inventory full! Lost {item.name} from the destroyed leg.")
 
         # Battering Bat - Frost Axe or Chainmail from arms
         elif enemy.name == "Battering Bat":
@@ -949,6 +960,8 @@ class Game:
                     self.status_popup_timer = 60
                     self.status_popup_text = f"Got {item.name}!"
                     self.status_popup_color = (100, 255, 100)
+                else:
+                    self.combat_log.append(f"Inventory full! Lost {item.name} from the destroyed arm.")
 
         # Armored Golem - Dragon Scale from legs
         elif enemy.name == "Armored Golem":
@@ -959,7 +972,9 @@ class Game:
                     self.status_popup_timer = 60
                     self.status_popup_text = f"Got {item.name}!"
                     self.status_popup_color = (255, 215, 0)  # Gold for rare item
-        
+                else:
+                    self.combat_log.append(f"Inventory full! Lost {item.name} from the destroyed leg.")
+
         # Spikey Slime - Health Potion from arms
         elif enemy.name == "Spikey Slime":
             if part in [BodyPart.LEFT_ARM, BodyPart.RIGHT_ARM] and drop_chance < 0.3:
@@ -969,6 +984,8 @@ class Game:
                     self.status_popup_timer = 45
                     self.status_popup_text = "Got Health Potion!"
                     self.status_popup_color = (100, 255, 100)
+                else:
+                    self.combat_log.append("Inventory full! Lost Health Potion from the destroyed arm.")
         if part == BodyPart.HEAD:
             enemy.hp = 0
             self.combat_log.append("HEAD DESTROYED! Fatal blow!")
