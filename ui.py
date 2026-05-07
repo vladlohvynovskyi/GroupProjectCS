@@ -168,4 +168,44 @@ def draw_ui_button_simple(game, rect, text, is_hovered=False):
     text_rect = text_surf.get_rect(center=rect.center)
     game.screen.blit(text_surf, text_rect)
 
-
+def draw_ui_health_bar_angria_row(game, x, y, width, height, current, maximum, row):
+    """Draw health bar using Angria health bar assets from specific row"""
+    
+    if not game.assets.ui_health:
+        draw_health_bar(game, x, y, width, height, current, maximum, RED)
+        return
+    
+    try:
+        percent = current / maximum
+        
+        # Determine column based on percentage
+        if percent >= 1.0:
+            col = 7
+        elif percent >= 0.9:
+            col = 6
+        elif percent >= 0.8:
+            col = 5
+        elif percent >= 0.65:
+            col = 4
+        elif percent >= 0.5:
+            col = 3
+        elif percent >= 0.3:
+            col = 2
+        elif percent >= 0.1:
+            col = 1
+        else:
+            col = 0
+        
+        frame_width = 48
+        frame_height = 16
+        
+        # Use the specified row (0-based: 0=health, 2=hunger, 3=sanity)
+        bar_piece = game.assets.ui_health.subsurface((col * frame_width, row * frame_height, frame_width, frame_height))
+        # Scale to desired height (24 instead of 16)
+        bar_scaled = pygame.transform.scale(bar_piece, (width, height))
+        game.screen.blit(bar_scaled, (x, y))
+        
+    except Exception as e:
+        draw_health_bar(game, x, y, width, height, current, maximum, RED)
+    
+    #pygame.draw.rect(game.screen, WHITE, (x, y, width, height), 1)

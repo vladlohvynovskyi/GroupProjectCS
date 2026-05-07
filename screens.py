@@ -10,7 +10,7 @@ from config import (
 )
 from enums import GameState, ItemType, BodyPart, Element
 from elements import ELEMENT_COLORS
-from ui import draw_text, draw_ui_button, draw_ui_button_simple, draw_health_bar, draw_ui_health_bar_angria, draw_button
+from ui import draw_text, draw_ui_button, draw_ui_button_simple, draw_health_bar, draw_ui_health_bar_angria, draw_button, draw_ui_health_bar_angria_row
 from minimap import draw_minimap
 from status import StatusType
 
@@ -93,9 +93,17 @@ def draw_exploration(game):
     draw_minimap(game)
     
     # Draw UI text
-    draw_text(game, f"HP: {game.player.hp}/{game.player.max_hp}", 10, 10, RED)
-    draw_text(game, f"Hunger: {game.player.hunger}/{game.player.max_hunger}", 10, 40, YELLOW)
-    draw_text(game, f"Sanity: {game.player.sanity}/{game.player.max_sanity}", 10, 70, BLUE)
+    # Health bar (row 0)
+    draw_text(game, "Health", 10, 10, RED, game.small_font)
+    draw_ui_health_bar_angria_row(game, 70, 6, 150, 32, game.player.hp, game.player.max_hp, 0)
+
+    # Hunger bar (row 2)
+    draw_text(game, "Hunger", 10, 44, YELLOW, game.small_font)
+    draw_ui_health_bar_angria_row(game, 70, 40, 150, 32, game.player.hunger, game.player.max_hunger, 2)
+
+    # Sanity bar (row 3)
+    draw_text(game, "Sanity", 10, 78, BLUE, game.small_font)
+    draw_ui_health_bar_angria_row(game, 70, 70, 150, 32, game.player.sanity, game.player.max_sanity, 3)
     draw_text(game, f"Floor: {game.floor}", 10, 100, WHITE)
     draw_text(game, f"Level: {game.player.level} | XP: {game.player.xp}", 10, 130, WHITE)
     
@@ -508,7 +516,42 @@ def draw_inventory(game):
             y = inv_box.y + 60 + visible_i * 36
 
             if real_i == game.selected_item_index:
-                pygame.draw.rect(game.screen, (70, 70, 70), (inv_box.x + 10, y - 4, inv_box.width - 20, 32))
+                pygame.draw.rect(game.screen, (70, 70, 70), (inv_box.x + 4, y - 4, inv_box.width - 8, 32))
+
+            # Draw item icon
+            icon_key = None
+            if item.name == "Iron Sword":
+                icon_key = "iron_sword"
+            elif item.name == "Flame Blade":
+                icon_key = "flame_blade"
+            elif item.name == "Frost Axe":
+                icon_key = "frost_axe"
+            elif item.name == "Stone Breaker":
+                icon_key = "stone_breaker"
+            elif item.name == "Chainmail":
+                icon_key = "chainmail"
+            elif item.name == "Iron Plate":
+                icon_key = "iron_plate"
+            elif item.name == "Dragon Scale":
+                icon_key = "dragon_scale"
+            elif item.name == "Cloth Armor":
+                icon_key = "cloth_armor"
+            elif item.name == "Wooden Sword":
+                icon_key = "wood_sword"
+            elif "Health Potion" in item.name:
+                icon_key = "health_potion"
+            elif item.name == "Torch":
+                icon_key = "torch"
+            elif "Bread" in item.name:
+                icon_key = "bread"
+            elif "Sanity Potion" in item.name:
+                icon_key = "sanity_potion"
+
+            if icon_key:
+                if hasattr(game.assets, 'item_icons') and icon_key in game.assets.item_icons:
+                    icon = game.assets.item_icons[icon_key]
+                    if icon:
+                        game.screen.blit(icon, (inv_box.x + 4, y - 3.5))
 
             item_text = item.name
 
@@ -529,17 +572,22 @@ def draw_inventory(game):
                 item_text = item_text[:35] + "..."
 
             color = YELLOW if real_i == game.selected_item_index else WHITE
-            draw_text(game, item_text, inv_box.x + 25, y, color, game.small_font)
+            draw_text(game, item_text, inv_box.x + 45, y, color, game.small_font)
 
             if item == game.player.equipped_weapon:
                 draw_text(game, "E", inv_box.right - 35, y, GREEN, game.small_font)
             elif item == game.player.equipped_armor:
                 draw_text(game, "E", inv_box.right - 35, y, BLUE, game.small_font)
 
-    # Buttons
-    game.use_item_button = pygame.Rect(panel_rect.x + 330, panel_rect.y + 405, 160, 50)
-    game.drop_item_button = pygame.Rect(panel_rect.x + 510, panel_rect.y + 405, 160, 50)
-    game.back_button = pygame.Rect(panel_rect.x + 690, panel_rect.y + 405, 160, 50)
+    # Buttons - centered with the inventory box
+    button_width = 160
+    button_spacing = 20
+    total_width = (button_width * 3) + (button_spacing * 2)
+    start_x = inv_box.centerx - total_width // 2
+
+    game.use_item_button = pygame.Rect(start_x, panel_rect.y + 405, button_width, 50)
+    game.drop_item_button = pygame.Rect(start_x + button_width + button_spacing, panel_rect.y + 405, button_width, 50)
+    game.back_button = pygame.Rect(start_x + (button_width + button_spacing) * 2, panel_rect.y + 405, button_width, 50)
 
     draw_button(game, game.use_item_button, "Use/Equip")
     draw_button(game, game.drop_item_button, "Drop")

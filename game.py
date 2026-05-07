@@ -10,7 +10,7 @@ from config import (
     YELLOW, RED, ORANGE
 )
 from enums import GameState, ItemType, BodyPart, Element
-from items import HealthPotion, Torch, Food, SanityPotion
+from items import HealthPotion, Torch, Food, SanityPotion, IronSword, FlameBlade, FrostAxe, StoneBreaker, Chainmail, IronPlate, DragonScale
 from assets import Assets
 from player import Player
 from dungeon import DungeonMap
@@ -281,8 +281,10 @@ class Game:
             elif tile == TILE_DOOR:
                 result = dungeon.open_door(check_x, check_y, player.keys)
                 if result == "opened":
+                    self.audio.play_door_sound()
                     self.combat_log.append("Door opened!")
                 elif result == "unlocked":
+                    self.audio.play_door_sound()
                     self.combat_log.append("Unlocked and opened!")
                 elif result == "locked":
                     needed_key = None
@@ -342,7 +344,19 @@ class Game:
                     else:
                         self.combat_log.append("You found crystals, but you have no crystal quest.")
                         break
-
+                
+                elif found == "iron_plate":
+                    item = IronPlate()
+                    if player.add_item(item):
+                        self.combat_log.append(f"Found {item.name}! (+{item.defense} defense)")
+                    else:
+                        self.combat_log.append("Inventory full!")
+                elif found == "stone_breaker":
+                    item = StoneBreaker()
+                    if player.add_item(item):
+                        self.combat_log.append(f"Found {item.name}! (DMG: {item.damage}, {item.element.name})")
+                    else:
+                        self.combat_log.append("Inventory full!")
     def _check_traps(self):
         player = self.player
         damage = self.dungeon.trigger_trap(player.tile_x(), player.tile_y())
@@ -896,7 +910,65 @@ class Game:
     def _handle_part_destroyed(self, part):
         """Handle effects when body part is destroyed"""
         enemy = self.current_enemy
+        drop_chance = random.random()
+
+        # ===== ITEM DROPS FROM ARMS AND LEGS ONLY =====
+    
+        # Flying Monstrosity - Iron Sword or Chainmail from arms
+        if enemy.name == "Flying Monstrosity":
+            if part in [BodyPart.LEFT_ARM, BodyPart.RIGHT_ARM] and drop_chance < 0.3:
+                if random.random() < 0.7:
+                    item = IronSword()
+                else:
+                    item = Chainmail()
+                if self.player.add_item(item):
+                    self.combat_log.append(f"You obtained {item.name} from the destroyed arm!")
+                    self.status_popup_timer = 60
+                    self.status_popup_text = f"Got {item.name}!"
+                    self.status_popup_color = (100, 255, 100)
+
+        # Bee Scared - Flame Blade from legs
+        elif enemy.name == "Bee Scared":
+            if part in [BodyPart.LEFT_LEG, BodyPart.RIGHT_LEG] and drop_chance < 0.25:
+                item = FlameBlade()
+                if self.player.add_item(item):
+                    self.combat_log.append(f"You obtained {item.name} from the destroyed leg!")
+                    self.status_popup_timer = 60
+                    self.status_popup_text = f"Got {item.name}!"
+                    self.status_popup_color = (100, 255, 100)
+
+        # Battering Bat - Frost Axe or Chainmail from arms
+        elif enemy.name == "Battering Bat":
+            if part in [BodyPart.LEFT_ARM, BodyPart.RIGHT_ARM] and drop_chance < 0.25:
+                if random.random() < 0.7:
+                    item = FrostAxe()
+                else:
+                    item = Chainmail()
+                if self.player.add_item(item):
+                    self.combat_log.append(f"You obtained {item.name} from the destroyed arm!")
+                    self.status_popup_timer = 60
+                    self.status_popup_text = f"Got {item.name}!"
+                    self.status_popup_color = (100, 255, 100)
+
+        # Armored Golem - Dragon Scale from legs
+        elif enemy.name == "Armored Golem":
+            if part in [BodyPart.LEFT_LEG, BodyPart.RIGHT_LEG] and drop_chance < 0.35:
+                item = DragonScale()
+                if self.player.add_item(item):
+                    self.combat_log.append(f"You obtained {item.name} from the destroyed leg!")
+                    self.status_popup_timer = 60
+                    self.status_popup_text = f"Got {item.name}!"
+                    self.status_popup_color = (255, 215, 0)  # Gold for rare item
         
+        # Spikey Slime - Health Potion from arms
+        elif enemy.name == "Spikey Slime":
+            if part in [BodyPart.LEFT_ARM, BodyPart.RIGHT_ARM] and drop_chance < 0.3:
+                item = HealthPotion("Health Potion", 30)
+                if self.player.add_item(item):
+                    self.combat_log.append(f"You obtained a Health Potion from the destroyed arm!")
+                    self.status_popup_timer = 45
+                    self.status_popup_text = "Got Health Potion!"
+                    self.status_popup_color = (100, 255, 100)
         if part == BodyPart.HEAD:
             enemy.hp = 0
             self.combat_log.append("HEAD DESTROYED! Fatal blow!")
