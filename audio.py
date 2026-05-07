@@ -51,6 +51,16 @@ class AudioManager:
         except Exception as e:
             print(f"Could not load fireplace.wav from music folder: {e}")
 
+        try:
+            self.door_sounds = []
+            for i in range(1, 4):
+                door = pygame.mixer.Sound(f"assets/sounds/doors{i}.mp3")
+                door.set_volume(self.sfx_volume)
+                self.door_sounds.append(door)
+        except Exception as e:
+            print(f"Could not load door sounds: {e}")
+            self.door_sounds = []
+
         # Sanity
         sanity_files = {
             "sanity_whisper": "Crying_moaning_ambience_3.wav",
@@ -214,6 +224,11 @@ class AudioManager:
           self.sounds["armored_golem_death"].play()
       elif "death" in self.sounds:
           self.sounds["death"].play()  # Default death sound
+
+    def play_door_sound(self):
+        """Play a random door opening sound"""
+        if self.door_sounds:
+            random.choice(self.door_sounds).play()
 
     def update_sanity_audio(self, sanity):
         if sanity <= 20:

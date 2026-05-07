@@ -25,18 +25,41 @@ class Weapon(Item):
     def __init__(self, name, element, damage, description=""):
         super().__init__(name, ItemType.WEAPON, element, damage, damage, 0, description)
 
+class IronSword(Weapon):
+    def __init__(self):
+        super().__init__("Iron Sword", Element.NORMAL, 20, "A sturdy iron blade.")
 
+class FlameBlade(Weapon):
+    def __init__(self):
+        super().__init__("Flame Blade", Element.FIRE, 18, "BURN! BURN! BURN!")
+
+class FrostAxe(Weapon):
+     def __init__(self):
+        super().__init__("Frost Axe", Element.WATER, 18, "Chill enemies down to their bad bone.")
+
+class StoneBreaker(Weapon):
+    def __init__(self):
+        super().__init__("Stone Breaker", Element.EARTH, 22, "Break 'em down")
 class HealthPotion(Item):
     def __init__(self, name, heal_amount):
         super().__init__(name, ItemType.HEALTH, Element.NORMAL,
                          heal_amount, 0, 0, f"Heals {heal_amount} HP")
 
-
 class Armor(Item):
     def __init__(self, name, defense, description=""):
         super().__init__(name, ItemType.ARMOR, Element.NORMAL, 0, 0, defense, description)
 
+class Chainmail(Armor):
+    def __init__(self):
+        super().__init__("Chainmail", 5, "Flexible metal mesh armor")
 
+class IronPlate(Armor):
+    def __init__(self):
+        super().__init__("Iron Plate", 7, "Heavy steel protection")
+
+class DragonScale(Armor):
+    def __init__(self):
+        super().__init__("Dragon Scale", 10, "Is this made from a Dragon?")
 class Torch(Item):
     def __init__(self, name="Torch", duration=120.0, radius_bonus=160):
         super().__init__(name, ItemType.TORCH, Element.NORMAL,

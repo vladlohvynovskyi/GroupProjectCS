@@ -2,7 +2,7 @@ import os
 
 import pygame
 
-from config import TILE_SIZE, ASSET_DIR, UI_DIR, SCRIPT_DIR
+from config import TILE_SIZE, ASSET_DIR, UI_DIR, SCRIPT_DIR, ARMORY_DIR
 
 
 def load_sprite(filename, width=TILE_SIZE, height=TILE_SIZE):
@@ -63,6 +63,9 @@ class Assets:
         self.ui_dialog = None
         self.ui_title = None
         self.combat_bg = None
+
+        self.item_icons = {}
+        self._load_item_icons()
         
         self._load_ui_assets()
 
@@ -138,3 +141,31 @@ class Assets:
             load_sprite(f"doc_run_anim_f{i}.png", TILE_SIZE, TILE_SIZE)
             for i in range(4)
         ]
+
+    def _load_item_icons(self):
+        """Load item icon images from armory folder"""
+        icons_dir = os.path.join(SCRIPT_DIR, "assets", "images", "armory")
+        print(f"Looking for item icons in: {icons_dir}")
+        
+        icons = [
+            "iron_sword.png", "flame_blade.png", "frost_axe.png", 
+            "stone_breaker.png", "chainmail.png", "iron_plate.png", 
+            "dragon_scale.png", "health_potion.png", "torch.png", 
+            "bread.png", "sanity_potion.png", "cloth_armor.png", "wood_sword.png"
+        ]
+        
+        for icon_name in icons:
+            key = icon_name.replace(".png", "") 
+            try:
+                path = os.path.join(icons_dir, icon_name)
+                if os.path.exists(path):
+                    img = pygame.image.load(path).convert_alpha()
+                    img = pygame.transform.scale(img, (32, 32))
+                    self.item_icons[key] = img
+                    print(f"Loaded icon: {icon_name}")
+                else:
+                    print(f"Icon not found: {icon_name}")
+                    self.item_icons[key] = None
+            except Exception as e:
+                print(f"Could not load icon: {icon_name} - {e}")
+                self.item_icons[key] = None
