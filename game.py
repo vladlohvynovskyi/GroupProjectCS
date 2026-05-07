@@ -1318,12 +1318,18 @@ class Game:
         self.npcs = []
 
         npc_templates = [
-            ("Healer", ["I can heal you."], "healer"),
-            ("Merchant", ["Take a look."], "merchant"),
-            ("Quest giver", ["Defeat enemies for me."], "quest"),
-            ("Guide", ["Stay close to the light.", "Doors may hide danger."], "guide"),
-        ]
-
+            ("Healer", [], "healer"), 
+            ("Merchant", [], "merchant"), 
+            ("Quest giver", [], "quest"), 
+            ("Guide", ["Torches help you survive the darkness.", 
+                       "Darkness lowers your sanity if you stay without light too long.",
+                       "Eat food before your hunger gets too low.",
+                       "Sanity potions restore your mind when things get dangerous.",
+                       "If hunger is low, find bread or other food before exploring deeper.",
+                       "Finish your quest and claim the reward before using the stairs.",
+                       "If you accept a crystal quest, search unopened chests.",
+                       ], "guide"), 
+            ]
     
         
         possible_rooms = self.dungeon.rooms[1:]
