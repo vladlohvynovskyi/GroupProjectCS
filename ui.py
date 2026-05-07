@@ -208,4 +208,4 @@ def draw_ui_health_bar_angria_row(game, x, y, width, height, current, maximum, r
     except Exception as e:
         draw_health_bar(game, x, y, width, height, current, maximum, RED)
     
-    #pygame.draw.rect(game.screen, WHITE, (x, y, width, height), 1)
+    pygame.draw.rect(game.screen, DARK_GRAY, (x, y, width, height), 1)

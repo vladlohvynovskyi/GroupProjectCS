@@ -69,7 +69,7 @@ class NPC:
                     (Food("Bread", random.randint(20, 40)), 20),
                     (SanityPotion("Sanity Potion", random.randint(25, 40)), 40),
                     (Torch(), 25),
-                    (Armor("Leather Armor", 5, "Better protection"), 50),
+                    (Armor("Chainmail", 5, "Better protection"), 50),
                 ]
 
                 self.shop_items = []

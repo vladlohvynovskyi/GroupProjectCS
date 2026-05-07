@@ -672,10 +672,45 @@ def draw_shop(game):
         y = shop_box.y + 60 + visible_i * 36
 
         if real_i == game.selected_shop_index:
-            pygame.draw.rect(game.screen, (70, 70, 70), (shop_box.x + 10, y - 4, shop_box.width - 20, 32))
+            pygame.draw.rect(game.screen, (70, 70, 70), (shop_box.x + 4, y - 4, shop_box.width - 8, 32))
+
+        # Draw item icon
+        icon_key = None
+        if item.name == "Iron Sword":
+            icon_key = "iron_sword"
+        elif item.name == "Flame Blade":
+            icon_key = "flame_blade"
+        elif item.name == "Frost Axe":
+            icon_key = "frost_axe"
+        elif item.name == "Stone Breaker":
+            icon_key = "stone_breaker"
+        elif item.name == "Chainmail":
+            icon_key = "chainmail"
+        elif item.name == "Iron Plate":
+            icon_key = "iron_plate"
+        elif item.name == "Dragon Scale":
+            icon_key = "dragon_scale"
+        elif item.name == "Cloth Armor":
+            icon_key = "cloth_armor"
+        elif item.name == "Wooden Sword":
+            icon_key = "wood_sword"
+        elif "Health Potion" in item.name:
+            icon_key = "health_potion"
+        elif item.name == "Torch":
+            icon_key = "torch"
+        elif "Bread" in item.name:
+            icon_key = "bread"
+        elif "Sanity Potion" in item.name:
+            icon_key = "sanity_potion"
+
+        if icon_key:
+            if hasattr(game.assets, 'item_icons') and icon_key in game.assets.item_icons:
+                icon = game.assets.item_icons[icon_key]
+                if icon:
+                    game.screen.blit(icon, (shop_box.x + 4, y - 3.5))
 
         color = YELLOW if real_i == game.selected_shop_index else WHITE
-        draw_text(game, item.name, shop_box.x + 25, y, color, game.small_font)
+        draw_text(game, item.name, shop_box.x + 45, y, color, game.small_font)
         draw_text(game, f"{game.shop_prices[real_i]} XP", shop_box.x + 335, y, GREEN, game.small_font)
 
 

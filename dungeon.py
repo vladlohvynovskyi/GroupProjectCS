@@ -374,16 +374,16 @@ class DungeonMap:
                 floor_tiles.remove((ex, ey))
 
                 # Difficulty scales with room index
-                if i < 5:
+                if i < 4:
                     enemy_type = random.choice(["basic", "basic", "fire"])  # Early rooms
-                elif i < 10:
+                elif i < 8:
                     enemy_type = random.choice(["fire", "water", "earth"])
-                elif i < 20:
+                elif i < 12:
                     enemy_type = random.choice(["water", "earth", "fire"])
                 else:
                     # Later rooms have chance for mini_boss
                     enemy_type = random.choice(
-                        ["earth", "mini_boss"] if random.random() < 0.2
+                        ["earth", "mini_boss"] if random.random() <= 0.3
                         else ["earth", "fire", "water"])
 
                 # Create enemy

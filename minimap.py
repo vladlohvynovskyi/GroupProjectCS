@@ -61,9 +61,9 @@ def draw_minimap(game):
     
     #NPC dots
     for npc in game.npcs:
-        if game.revealed[npc.tile_y][npc.tile_x]:
-            nx = mx + npc.tile_x * MINIMAP_TILE + MINIMAP_TILE // 2
-            ny = my + npc.tile_y * MINIMAP_TILE + MINIMAP_TILE // 2
+        if game.revealed[npc.current_tile_y][npc.current_tile_x]:
+            nx = mx + npc.current_tile_x * MINIMAP_TILE + MINIMAP_TILE // 2
+            ny = my + npc.current_tile_y * MINIMAP_TILE + MINIMAP_TILE // 2
 
             #Quest giver npc with active quest is purple
             if game.quest_giver == npc and (game.quest_active):
