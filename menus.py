@@ -139,7 +139,7 @@ def draw_main_menu(game):
     panel_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20)
     _draw_panel(game, panel_rect, game.assets.ui_panel_tall)
 
-    _draw_title_bar(game, SCREEN_WIDTH // 2, 140, 560, "DEPTH OF DREAD")
+    _draw_title_bar(game, SCREEN_WIDTH // 2, 140, 560, "Dreadful Depths")
 
     subtitle = game.small_font.render(
         "A dungeon crawler of elemental dread", True, LIGHT_GRAY

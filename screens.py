@@ -616,18 +616,6 @@ def draw_game_over(game):
               200, 450, WHITE, game.small_font)
 
 
-def draw_victory(game):
-    """Draw victory screen"""
-    game.screen.fill((24, 21, 35))
-    draw_text(game, "VICTORY!", 300, 200, YELLOW,
-              pygame.font.SysFont(None, 72))
-    draw_text(game, "All enemies defeated!", 300, 300, GREEN)
-    draw_text(game,
-        f"Final Level: {game.player.level} | XP: {game.player.xp}",
-        280, 350, WHITE)
-    draw_text(game, "Press SPACE to play again or ESC to quit",
-              200, 450, WHITE, game.small_font)
-
 def draw_shop(game):
     game.screen.fill(COLOR_BLACK)
 

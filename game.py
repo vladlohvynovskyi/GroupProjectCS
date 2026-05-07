@@ -18,7 +18,7 @@ from audio import AudioManager
 from status import StatusType
 from screens import (
     draw_exploration, draw_combat, draw_inventory,
-    draw_game_over, draw_victory, draw_shop
+    draw_game_over, draw_shop
 )
 from menus import (
     build_main_menu_buttons, build_pause_menu_buttons, build_back_button,
@@ -795,12 +795,8 @@ class Game:
         if self.current_enemy in self.dungeon.enemies:
             self.dungeon.enemies.remove(self.current_enemy)
         
-        # Check if all enemies are defeated
-        if not self.dungeon.enemies:
-            self.state = GameState.VICTORY
-        else:
-            self.state = GameState.EXPLORATION
-            self.audio.play_exploration_music()
+        self.state = GameState.EXPLORATION
+        self.audio.play_exploration_music()
         
         # Clear current enemy
         self.current_enemy = None
@@ -1136,8 +1132,8 @@ class Game:
 
                 # Global key handlers (per-state handlers own Esc; don't consume it here)
                 if event.type == pygame.KEYDOWN:
-                    # Restart on game over or victory
-                    if self.state in [GameState.GAME_OVER, GameState.VICTORY]:
+                    # Restart on game over
+                    if self.state == GameState.GAME_OVER:
                         if event.key == pygame.K_SPACE:
                             self._start_new_run()
                             self.state = GameState.EXPLORATION
@@ -1231,10 +1227,6 @@ class Game:
                 # Draw game over screen
                 draw_game_over(self)
 
-            elif self.state == GameState.VICTORY:
-                # Draw victory screen
-                draw_victory(self)
-            
             # Update display
             pygame.display.flip()
         

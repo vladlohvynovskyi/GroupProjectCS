@@ -8,7 +8,6 @@ class GameState(Enum):
     INVENTORY = 3
     PAUSED = 4
     GAME_OVER = 5
-    VICTORY = 6
     SHOP = 7
     OPTIONS = 8
     CONTROLS = 9
