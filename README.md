@@ -46,21 +46,13 @@ https://fonts.google.com/specimen/MedievalSharp?preview.script=Latn
 
 
 
-1. Clone the Repository
-
-git clone https://github.com/vladlohvynovskyi/GroupProjectCS.git
-
-cd GroupProjectCS
-
-
-
-2\. Create the virtual environment
+1\. Create the virtual environment
 
 python3 -m venv .venv
 
 
 
-3\. Activate the virtual environment
+2\. Activate the virtual environment
 
 
 
@@ -76,13 +68,13 @@ Windows PowerShell :
 
 
 
-4\. Install dependencies
+3\. Install dependencies
 
 pip install -r requirements.txt
 
 
 
-5\. Run the game
+4\. Run the game
 
 python3 main.py
 
